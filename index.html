@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multipoly Online</title>
+    <title>Multipoly Online - Édition Stratégie</title>
     
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -52,138 +52,83 @@
             background: #edf2f7;
             color: #2d3748;
             border: 1px solid #cbd5e0;
-            font-size: 2.45rem;
             display: flex;
             flex-direction: column;
             text-align: center;
             overflow: hidden;
             user-select: none;
             transition: transform 0.2s;
-            justify-content: center; /* Center text vertically by default */
+            justify-content: center;
         }
         .space:hover { z-index: 10; transform: scale(1.1); box-shadow: 0 0 15px rgba(0,0,0,0.3); }
         
-        /* Barres de couleur positionnées absolument pour être toujours visibles */
-        .color-bar {
-            position: absolute;
-            z-index: 1;
-        }
+        .color-bar { position: absolute; z-index: 1; }
         
-        .space-name { font-size:0.5rem; line-height:0.4rem; z-index: 2; display: flex; align-items: center; justify-content: center; padding: 2px; font-weight: 700; line-height: 1; min-height: 20px; }
+        .space-name { font-size:0.5rem; line-height:0.4rem; z-index: 2; display: flex; align-items: center; justify-content: center; padding: 2px; font-weight: 700; min-height: 20px; }
         .space-price { z-index: 2; font-size: 0.6rem; padding-bottom: 2px; color: #4a5568; font-weight: bold; }
         
-        /* --- PIONS (AMÉLIORÉS) --- */
+        /* --- MAISONS & HÔTELS --- */
+        .house-container {
+            position: absolute;
+            z-index: 5;
+            display: flex;
+            gap: 1px;
+            justify-content: center;
+            width: 100%;
+            pointer-events: none;
+        }
+        /* Positionnement des maisons selon l'orientation */
+        .houses-bottom { top: 2px; left: 0; } /* Ligne du bas: maisons en haut de la case */
+        .houses-left { top: 0; right: 2px; flex-direction: column; height: 100%; width: auto; } /* Ligne gauche: maisons à droite */
+        .houses-top { bottom: 2px; left: 0; } /* Ligne haut: maisons en bas */
+        .houses-right { top: 0; left: 2px; flex-direction: column; height: 100%; width: auto; } /* Ligne droite: maisons à gauche */
+
+        .house-icon { color: #10B981; font-size: 8px; text-shadow: 0 1px 1px rgba(0,0,0,0.5); } /* Vert */
+        .hotel-icon { color: #EF4444; font-size: 10px; text-shadow: 0 1px 1px rgba(0,0,0,0.5); } /* Rouge */
+
+        /* --- PIONS --- */
         .player-token {
             width: 28px; height: 28px; 
-            border-radius: 50%;
-            border: 3px solid white; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.6), inset 0 -2px 4px rgba(0,0,0,0.3);
-            position: absolute; 
-            transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); /* Effet rebond */
-            z-index: 50;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            color: white;
-            transform: translate(-50%, -50%); /* Centrage précis */
+            border-radius: 50%; border: 3px solid white; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.6);
+            position: absolute; transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 50; display: flex; align-items: center; justify-content: center;
+            font-size: 14px; color: white; transform: translate(-50%, -50%);
         }
-        /* Offset pour que les pions ne se chevauchent pas trop */
         .token-stack-0 { margin-top: -5px; margin-left: -5px; }
         .token-stack-1 { margin-top: -5px; margin-left: 5px; }
         .token-stack-2 { margin-top: 5px; margin-left: -5px; }
         .token-stack-3 { margin-top: 5px; margin-left: 5px; }
 
-        /* --- TEXTE FLOTTANT (ARGENT) --- */
-        @keyframes floatUp {
-            0% { opacity: 1; transform: translateY(0) scale(1); }
-            100% { opacity: 0; transform: translateY(-40px) scale(1.2); }
-        }
-        .float-money {
-            position: absolute;
-            font-weight: bold;
-            font-size: 1.2rem;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-            pointer-events: none;
-            animation: floatUp 2s forwards;
-            z-index: 100;
-        }
+        /* --- TEXTE FLOTTANT --- */
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-40px); } }
+        .float-money { position: absolute; font-weight: bold; font-size: 1.2rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5); pointer-events: none; animation: floatUp 2s forwards; z-index: 100; }
 
-        /* --- MODALES & CARTES (STYLE BALATRO) --- */
-        .modal-overlay {
-            position: absolute; inset: 0;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(4px);
-            z-index: 60;
-            display: flex; align-items: center; justify-content: center;
-            animation: fadeIn 0.3s;
-        }
+        /* --- UI OVERLAYS --- */
+        .modal-overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px); z-index: 60; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.3s; }
         
-        .card-balatro {
-            width: 220px; height: 320px;
-            background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
-            border-radius: 15px;
-            border: 8px solid #2d3748;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-            display: flex; flex-direction: column; align-items: center; justify-content: space-between;
-            padding: 20px;
-            text-align: center;
-            transform-style: preserve-3d;
-            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            position: relative;
+        /* Fenêtre de Construction */
+        .build-modal {
+            background: white; color: #1a202c; width: 90%; max-width: 400px; max-height: 80vh;
+            border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
-        .card-balatro::after {
-            content: ''; position: absolute; inset: 5px;
-            border: 2px dashed #cbd5e0; border-radius: 10px; pointer-events: none;
-        }
-        .card-title { font-family: 'Impact', sans-serif; font-size: 1.8rem; text-transform: uppercase; letter-spacing: 1px; }
-        .card-icon { font-size: 4rem; margin: 10px 0; filter: drop-shadow(2px 4px 0px rgba(0,0,0,0.2)); }
-        .card-desc { font-weight: bold; color: #4a5568; font-size: 1rem; line-height: 1.2; }
+        .build-header { background: #1a202c; color: white; padding: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .build-body { padding: 15px; overflow-y: auto; }
+        .build-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #e2e8f0; }
+        .build-item:last-child { border-bottom: none; }
         
-        .jail-stamp {
-            font-family: 'Black Ops One', cursive, sans-serif;
-            color: #e53e3e;
-            font-size: 4rem;
-            border: 8px solid #e53e3e;
-            padding: 20px;
-            border-radius: 10px;
-            transform: rotate(-15deg) scale(0);
-            animation: stampIn 0.4s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            text-shadow: 2px 2px 0px black;
-            background: rgba(255,255,255,0.9);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-        }
+        /* Autres animations */
+        .card-balatro { width: 220px; height: 320px; background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%); border-radius: 15px; border: 8px solid #2d3748; box-shadow: 0 20px 60px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 20px; text-align: center; animation: popIn 0.5s; position: relative; }
+        .jail-stamp { font-family: 'Black Ops One', cursive, sans-serif; color: #e53e3e; font-size: 4rem; border: 8px solid #e53e3e; padding: 20px; border-radius: 10px; transform: rotate(-15deg); animation: stampIn 0.4s forwards; background: rgba(255,255,255,0.9); box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes popIn { 
-            0% { transform: scale(0.5) rotateY(90deg); opacity: 0; } 
-            100% { transform: scale(1) rotateY(0deg); opacity: 1; } 
-        }
-        @keyframes stampIn {
-            0% { transform: scale(2) rotate(-15deg); opacity: 0; }
-            100% { transform: scale(1) rotate(-15deg); opacity: 1; }
-        }
+        @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes stampIn { 0% { transform: scale(2) rotate(-15deg); opacity: 0; } 100% { transform: scale(1) rotate(-15deg); opacity: 1; } }
 
-        .center-board {
-            grid-column: 2 / span 9;
-            grid-row: 2 / span 9;
-            background: #2d3748; /* Darker center */
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            position: relative;
-        }
-        
-        .logo-text {
-            font-family: 'Arial Black', sans-serif;
-            letter-spacing: -2px;
-            text-shadow: 4px 4px 0px #000;
-            color: white;
-        }
+        .center-board { grid-column: 2 / span 9; grid-row: 2 / span 9; background: #2d3748; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; position: relative; }
+        .logo-text { font-family: 'Arial Black', sans-serif; letter-spacing: -2px; text-shadow: 4px 4px 0px #000; color: white; }
 
-        /* Responsive */
         @media (max-width: 600px) {
             .space-name { font-size: 0.5rem; display: none; }
             .space-price { display: none; }
@@ -197,7 +142,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        // --- DONNÉES DU JEU (40 Cases) ---
+        // --- DONNÉES DU JEU ---
         const SPACES = [
             { id: 0, name: "Local", type: "go", color: "#f0f0f0" },
             { id: 1, name: "Le QG", price: 60, group: "brown", type: "property", color: "#8B4513" },
@@ -241,7 +186,27 @@
             { id: 39, name: "Les NégoMasters", price: 400, group: "blue", type: "property", color: "#0000FF" },
         ];
 
-        // --- CONFIGURATION FIREBASE ---
+        // --- HELPERS LOGIQUE ---
+        // Prix d'une maison selon le groupe (Approximation standard Monopoly)
+        const getHouseCost = (group) => {
+            if(['brown', 'lightblue'].includes(group)) return 50;
+            if(['pink', 'orange'].includes(group)) return 100;
+            if(['red', 'yellow'].includes(group)) return 150;
+            return 200; // green, blue
+        };
+
+        // Calcul du Loyer avec maisons
+        const calculateRent = (space, houseCount) => {
+            let base = Math.floor(space.price * 0.1); // ~10% base
+            if (houseCount === 0) return base;
+            if (houseCount === 1) return base * 5;
+            if (houseCount === 2) return base * 15;
+            if (houseCount === 3) return base * 40;
+            if (houseCount === 4) return base * 70;
+            if (houseCount === 5) return base * 100; // Hôtel
+            return base;
+        };
+
         const firebaseConfig = {
             apiKey: "AIzaSyC3z9jKfNADm6Qt0z2HXTskyvlEXoghS88",
             authDomain: "freemultipoly.firebaseapp.com",
@@ -251,7 +216,6 @@
             appId: "1:40208008932:web:cf1e842a3df7bc67d74ef1"
         };
 
-        // Cartes Chance (Exemples)
         const CHANCE_CARDS = [
             { text: "Rendez-vous rue de la Paix", money: 0, move: 39 },
             { text: "Avancez jusqu'à la case Départ", money: 200, move: 0 },
@@ -263,9 +227,7 @@
         let app, db, auth;
         try {
             if (typeof firebase !== 'undefined') {
-                const configToUse = (typeof __firebase_config !== 'undefined' && __firebase_config) 
-                    ? JSON.parse(__firebase_config) 
-                    : firebaseConfig; 
+                const configToUse = (typeof __firebase_config !== 'undefined' && __firebase_config) ? JSON.parse(__firebase_config) : firebaseConfig; 
                 if (!firebase.apps.length) app = firebase.initializeApp(configToUse);
                 else app = firebase.app();
                 db = firebase.firestore(app);
@@ -274,8 +236,6 @@
         } catch (e) { console.error(e); }
 
         const { useState, useEffect, useRef } = React;
-
-        // Helper pour attendre
         const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
         function App() {
@@ -290,11 +250,8 @@
                 const initAuth = async () => {
                     if (!auth) return;
                     try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await auth.signInWithCustomToken(__initial_auth_token);
-                        } else {
-                            await auth.signInAnonymously();
-                        }
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await auth.signInWithCustomToken(__initial_auth_token);
+                        else await auth.signInAnonymously();
                     } catch(err) { setError(err.message); }
                 };
                 initAuth();
@@ -335,9 +292,10 @@
                     currentPlayerIndex: 0,
                     log: [`${playerName} a créé la partie.`],
                     owners: {},
+                    houses: {}, // { spaceId: count } (1-4: Maison, 5: Hotel)
                     status: 'WAITING',
                     lastDice: [0, 0],
-                    currentEvent: null, // Pour gérer les affichages modaux
+                    currentEvent: null, 
                 };
 
                 await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('games').doc(newGameId).set(initialState);
@@ -381,7 +339,6 @@
             return <GameTable gameState={gameState} user={user} db={db} gameId={gameId} />;
         }
 
-        // --- COMPOSANT LOBBY ---
         function Lobby({ createGame, joinGame, playerName, setPlayerName, error, user, loading }) {
             const [code, setCode] = useState("");
             return (
@@ -389,10 +346,9 @@
                     <div className="bg-gray-800 p-8 rounded-xl shadow-2xl max-w-md w-full border border-gray-700">
                         <div className="text-center mb-8">
                             <h1 className="text-5xl font-black text-green-400 logo-text mb-2">MULTIPOLY</h1>
-                            <span className="bg-blue-600 text-xs px-2 py-1 rounded uppercase tracking-widest font-bold">Édition Online</span>
+                            <span className="bg-blue-600 text-xs px-2 py-1 rounded uppercase tracking-widest font-bold">Édition Stratégie</span>
                         </div>
                         {error && <div className="bg-red-900/50 border border-red-500 text-red-200 p-3 rounded mb-4 text-sm">{error}</div>}
-                        
                         <div className="space-y-4">
                             <input type="text" value={playerName} onChange={e => setPlayerName(e.target.value)} className="block w-full rounded bg-gray-700 border-gray-600 text-white p-3 focus:border-green-500 focus:outline-none" placeholder="Votre Pseudo" />
                             <button onClick={createGame} disabled={!user || loading} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded shadow-lg transition disabled:opacity-50">CRÉER UNE PARTIE</button>
@@ -406,22 +362,21 @@
             );
         }
 
-        // --- COMPOSANT JEU ---
         function GameTable({ gameState, user, db, gameId }) {
             const me = gameState.players.find(p => p.id === user.uid);
             const isMyTurn = gameState.status === 'PLAYING' && gameState.players[gameState.currentPlayerIndex].id === user.uid;
-            const [moneyFloats, setMoneyFloats] = useState([]); // [{id, amount, x, y}]
+            const [moneyFloats, setMoneyFloats] = useState([]); 
+            const [isRolling, setIsRolling] = useState(false);
+            const [showBuildMenu, setShowBuildMenu] = useState(false);
             const prevPlayersRef = useRef(gameState.players);
 
-            // Détection changement argent pour animation
             useEffect(() => {
                 gameState.players.forEach((p, idx) => {
                     const prev = prevPlayersRef.current.find(old => old.id === p.id);
                     if (prev && prev.money !== p.money) {
                         const diff = p.money - prev.money;
                         const text = diff > 0 ? `+${diff}€` : `${diff}€`;
-                        const color = diff > 0 ? '#48bb78' : '#f56565'; // Green or Red
-                        // On ajoute une animation flottante
+                        const color = diff > 0 ? '#48bb78' : '#f56565';
                         const floatId = Date.now() + Math.random();
                         setMoneyFloats(prev => [...prev, { id: floatId, text, color, playerId: p.id }]);
                         setTimeout(() => setMoneyFloats(prev => prev.filter(f => f.id !== floatId)), 2000);
@@ -436,85 +391,76 @@
             };
 
             const rollDice = async () => {
-                if (!isMyTurn) return;
+                if (!isMyTurn || isRolling) return;
+                setIsRolling(true);
 
-                // 1. Animation des dés (Phase Rolling)
-                
-                const d1 = Math.floor(Math.random() * 6) + 1;
-                const d2 = Math.floor(Math.random() * 6) + 1;
-                const total = d1 + d2;
+                try {
+                    const d1 = Math.floor(Math.random() * 6) + 1;
+                    const d2 = Math.floor(Math.random() * 6) + 1;
+                    const total = d1 + d2;
 
-                // Update dés
-                await updateState({ lastDice: [d1, d2] });
-                await wait(800); // Suspense dés
+                    await updateState({ lastDice: [d1, d2] });
+                    await wait(800); 
 
-                let newPos = (me.position + total) % 40;
-                let passedGo = (me.position + total) >= 40;
-                let newMoney = me.money + (passedGo ? 200 : 0);
-                
-                // 2. Déplacement (Phase Moving)
-                let tempPlayers = gameState.players.map(p => p.id === user.uid ? { ...p, position: newPos, money: newMoney } : p);
-                await updateState({ players: tempPlayers });
-                await wait(1500); // Temps du déplacement du pion
-
-                // 3. Résolution Case
-                const space = SPACES[newPos];
-                let logMsg = `${me.name} : ${d1}+${d2} -> ${space.name}.`;
-                let finalUpdates = {};
-
-                // -- PRISON --
-                if (space.type === 'gotojail') {
-                    await updateState({ currentEvent: { type: 'JAIL_ANIM', text: "DIRECTION PRISON !" } });
-                    await wait(2500); // Temps d'affichage du gros message
+                    let newPos = (me.position + total) % 40;
+                    let passedGo = (me.position + total) >= 40;
+                    let newMoney = me.money + (passedGo ? 200 : 0);
                     
-                    newPos = 10;
-                    tempPlayers = gameState.players.map(p => p.id === user.uid ? { ...p, position: 10, jail: true, money: newMoney } : p);
-                    finalUpdates['currentEvent'] = null;
-                } 
-                // -- CARTES (Chance / Caisse) --
-                else if (space.type === 'chance' || space.type === 'chest') {
-                    const card = CHANCE_CARDS[Math.floor(Math.random() * CHANCE_CARDS.length)];
-                    const title = space.type === 'chance' ? "CHANCE" : "CAISSE DE COM.";
-                    
-                    // Affiche la carte à tout le monde
-                    await updateState({ currentEvent: { type: 'CARD', title, text: card.text, icon: space.type === 'chance' ? 'question' : 'cube' } });
-                    await wait(4000); // Temps de lecture style Balatro
+                    let tempPlayers = gameState.players.map(p => p.id === user.uid ? { ...p, position: newPos, money: newMoney } : p);
+                    await updateState({ players: tempPlayers });
+                    await wait(1500); 
 
-                    if (card.money !== 0) newMoney += card.money;
-                    if (card.move !== undefined) {
-                        if (card.move === null) { /* no move */ }
-                        else newPos = card.move; 
+                    const space = SPACES[newPos];
+                    let logMsg = `${me.name} : ${d1}+${d2} -> ${space.name}.`;
+                    let finalUpdates = {};
+
+                    if (space.type === 'gotojail') {
+                        await updateState({ currentEvent: { type: 'JAIL_ANIM', text: "DIRECTION PRISON !" } });
+                        await wait(2500);
+                        newPos = 10;
+                        tempPlayers = gameState.players.map(p => p.id === user.uid ? { ...p, position: 10, jail: true, money: newMoney } : p);
+                        finalUpdates['currentEvent'] = null;
+                    } 
+                    else if (space.type === 'chance' || space.type === 'chest') {
+                        const card = CHANCE_CARDS[Math.floor(Math.random() * CHANCE_CARDS.length)];
+                        await updateState({ currentEvent: { type: 'CARD', title: space.type === 'chance' ? "CHANCE" : "CAISSE", text: card.text, icon: space.type === 'chance' ? 'question' : 'cube' } });
+                        await wait(4000);
+
+                        if (card.money !== 0) newMoney += card.money;
+                        if (card.move !== undefined) {
+                            if (card.move !== null) newPos = card.move; 
+                        }
+                        if (card.moveRel) newPos = (newPos + card.moveRel + 40) % 40;
+                        tempPlayers = gameState.players.map(p => p.id === user.uid ? { ...p, position: newPos, money: newMoney } : p);
+                        finalUpdates['currentEvent'] = null;
+                        logMsg += ` Carte: ${card.text}`;
                     }
-                    if (card.moveRel) newPos = (newPos + card.moveRel + 40) % 40;
+                    else if (space.type === 'tax') {
+                        newMoney -= space.price;
+                        tempPlayers = gameState.players.map(p => p.id === user.uid ? { ...p, money: newMoney } : p);
+                    }
+                    else if (gameState.owners[newPos] && gameState.owners[newPos] !== user.uid) {
+                        const ownerId = gameState.owners[newPos];
+                        
+                        // Calcul du loyer avec maisons
+                        const houses = (gameState.houses && gameState.houses[newPos]) || 0;
+                        const rent = calculateRent(space, houses);
 
-                    tempPlayers = gameState.players.map(p => p.id === user.uid ? { ...p, position: newPos, money: newMoney } : p);
-                    finalUpdates['currentEvent'] = null;
-                    logMsg += ` Carte: ${card.text}`;
-                }
-                // -- TAXES --
-                else if (space.type === 'tax') {
-                    newMoney -= space.price;
-                    tempPlayers = gameState.players.map(p => p.id === user.uid ? { ...p, money: newMoney } : p);
-                }
-                // -- LOYER --
-                else if (gameState.owners[newPos] && gameState.owners[newPos] !== user.uid) {
-                    const ownerId = gameState.owners[newPos];
-                    const rent = Math.floor(space.price * 0.2); // Loyer plus méchant (20%)
-                    newMoney -= rent;
-                    tempPlayers = gameState.players.map(p => {
-                        if (p.id === user.uid) return { ...p, money: newMoney };
-                        if (p.id === ownerId) return { ...p, money: p.money + rent };
-                        return p;
-                    });
-                    logMsg += ` Paye ${rent}€ de loyer.`;
-                }
+                        newMoney -= rent;
+                        tempPlayers = gameState.players.map(p => {
+                            if (p.id === user.uid) return { ...p, money: newMoney };
+                            if (p.id === ownerId) return { ...p, money: p.money + rent };
+                            return p;
+                        });
+                        logMsg += ` Paye ${rent}€ de loyer.`;
+                    }
 
-                // Final commit
-                finalUpdates['players'] = tempPlayers;
-                finalUpdates['log'] = firebase.firestore.FieldValue.arrayUnion(logMsg);
-                if (d1 !== d2) finalUpdates['currentPlayerIndex'] = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+                    finalUpdates['players'] = tempPlayers;
+                    finalUpdates['log'] = firebase.firestore.FieldValue.arrayUnion(logMsg);
+                    if (d1 !== d2) finalUpdates['currentPlayerIndex'] = (gameState.currentPlayerIndex + 1) % gameState.players.length;
 
-                await updateState(finalUpdates);
+                    await updateState(finalUpdates);
+                } catch (e) { console.error("Erreur:", e); } finally { setIsRolling(false); }
             };
 
             const buyProperty = async () => {
@@ -528,42 +474,63 @@
                 await updateState(updates);
             };
 
-            // Fonction positionnement grille
-            // --- POSITIONNEMENT AVEC BARRES DE COULEUR ORIENTÉES ---
+            const buildHouse = async (spaceId) => {
+                const space = SPACES[spaceId];
+                const cost = getHouseCost(space.group);
+                if (me.money < cost) return;
+
+                const currentHouses = (gameState.houses && gameState.houses[spaceId]) || 0;
+                if (currentHouses >= 5) return;
+
+                const updates = {
+                    [`houses.${spaceId}`]: currentHouses + 1,
+                    players: gameState.players.map(p => p.id === user.uid ? { ...p, money: p.money - cost } : p),
+                    log: firebase.firestore.FieldValue.arrayUnion(`${me.name} construit sur ${space.name}`)
+                };
+                await updateState(updates);
+            };
+
+            // Fonction pour savoir si on a un monopole
+            const hasMonopoly = (group) => {
+                const groupMembers = SPACES.filter(s => s.group === group);
+                return groupMembers.every(s => gameState.owners[s.id] === user.uid);
+            };
+
+            // Liste des propriétés constructibles
+            const buildableProperties = me.properties
+                .map(id => SPACES[id])
+                .filter(s => s.group && hasMonopoly(s.group))
+                .sort((a,b) => a.id - b.id);
+
             const getSpaceStyle = (index) => {
-                let gridColumn, gridRow, barClass = "", contentStyle = {};
-
-                if (index === 0) return { gridColumn: 11, gridRow: 11 }; // Go
-                if (index === 10) return { gridColumn: 1, gridRow: 11 }; // Jail
-                if (index === 20) return { gridColumn: 1, gridRow: 1 }; // Parking
-                if (index === 30) return { gridColumn: 11, gridRow: 1 }; // Go to Jail
-
-                // Common style for bar
+                let gridColumn, gridRow, barClass = "", contentStyle = {}, housesClass="";
+                if (index === 0) return { gridColumn: 11, gridRow: 11 }; 
+                if (index === 10) return { gridColumn: 1, gridRow: 11 };
+                if (index === 20) return { gridColumn: 1, gridRow: 1 };
+                if (index === 30) return { gridColumn: 11, gridRow: 1 };
                 const baseBar = "absolute z-10";
-
                 if (index < 10) {
-                    // BAS: Bar en haut
                     gridRow = 11; gridColumn = 11 - index;
                     barClass = `${baseBar} top-0 left-0 w-full h-1/4 border-b border-gray-400`;
+                    housesClass = "house-container houses-bottom";
                     contentStyle = { paddingTop: '25%' };
                 } else if (index < 20) {
-                    // GAUCHE: Bar à droite
                     gridColumn = 1; gridRow = 11 - (index - 10);
                     barClass = `${baseBar} top-0 right-0 h-full w-1/4 border-l border-gray-400`;
+                    housesClass = "house-container houses-left";
                     contentStyle = { paddingRight: '25%' };
                 } else if (index < 30) {
-                    // HAUT: Bar en bas
                     gridRow = 1; gridColumn = 1 + (index - 20);
                     barClass = `${baseBar} bottom-0 left-0 w-full h-1/4 border-t border-gray-400`;
+                    housesClass = "house-container houses-top";
                     contentStyle = { paddingBottom: '25%' };
                 } else {
-                    // DROITE: Bar à gauche
                     gridColumn = 11; gridRow = 1 + (index - 30);
                     barClass = `${baseBar} top-0 left-0 h-full w-1/4 border-r border-gray-400`;
+                    housesClass = "house-container houses-right";
                     contentStyle = { paddingLeft: '25%' };
                 }
-                
-                return { gridColumn, gridRow, barClass, contentStyle };
+                return { gridColumn, gridRow, barClass, contentStyle, housesClass };
             };
 
             const currentSpace = SPACES[me.position];
@@ -572,28 +539,67 @@
 
             return (
                 <div className="flex flex-col h-screen md:flex-row bg-gray-900 overflow-hidden select-none">
-                    {/* MODAL EVENT OVERLAY */}
+                    {/* MODAL EVENT */}
                     {gameState.currentEvent && (
                         <div className="modal-overlay">
-                            {gameState.currentEvent.type === 'JAIL_ANIM' && (
-                                <div className="jail-stamp">{gameState.currentEvent.text}</div>
-                            )}
+                            {gameState.currentEvent.type === 'JAIL_ANIM' && <div className="jail-stamp">{gameState.currentEvent.text}</div>}
                             {gameState.currentEvent.type === 'CARD' && (
                                 <div className="card-balatro">
                                     <div className="card-title text-gray-800">{gameState.currentEvent.title}</div>
-                                    <div className="card-icon text-blue-600">
-                                        <i className={`fas fa-${gameState.currentEvent.icon}`}></i>
-                                    </div>
+                                    <div className="card-icon text-blue-600"><i className={`fas fa-${gameState.currentEvent.icon}`}></i></div>
                                     <div className="card-desc">{gameState.currentEvent.text}</div>
                                 </div>
                             )}
                         </div>
                     )}
 
+                    {/* MENU CONSTRUCTION */}
+                    {showBuildMenu && (
+                        <div className="modal-overlay" onClick={() => setShowBuildMenu(false)}>
+                            <div className="build-modal" onClick={e => e.stopPropagation()}>
+                                <div className="build-header">
+                                    <span>CONSTRUIRE</span>
+                                    <button onClick={() => setShowBuildMenu(false)}><i className="fas fa-times"></i></button>
+                                </div>
+                                <div className="build-body">
+                                    {buildableProperties.length === 0 ? (
+                                        <p className="text-gray-500 text-center p-4">Vous devez posséder tous les terrains d'une même couleur pour construire.</p>
+                                    ) : (
+                                        buildableProperties.map(s => {
+                                            const h = (gameState.houses && gameState.houses[s.id]) || 0;
+                                            const cost = getHouseCost(s.group);
+                                            const canAfford = me.money >= cost;
+                                            return (
+                                                <div key={s.id} className="build-item">
+                                                    <div className="flex flex-col">
+                                                        <span className="font-bold">{s.name}</span>
+                                                        <span className="text-xs text-gray-500">
+                                                            {h === 5 ? 'Hôtel' : `${h} Maisons`} | Coût: {cost}€
+                                                        </span>
+                                                    </div>
+                                                    {h < 5 && (
+                                                        <button 
+                                                            disabled={!canAfford}
+                                                            onClick={() => buildHouse(s.id)}
+                                                            className={`px-3 py-1 rounded text-sm ${canAfford ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-500'}`}
+                                                        >
+                                                            {h === 4 ? 'Hôtel' : '+1 🏠'}
+                                                        </button>
+                                                    )}
+                                                    {h === 5 && <span className="text-green-600 font-bold">MAX</span>}
+                                                </div>
+                                            )
+                                        })
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* SIDEBAR */}
                     <div className="w-full md:w-80 bg-gray-800 border-r border-gray-700 flex flex-col z-20 shadow-xl">
                         <div className="p-4 bg-gray-900 border-b border-gray-700">
-                            <h2 className="text-xl font-black text-white tracking-tighter">MULTIPOLY <span className="text-green-500">ÉDITION TC</span></h2>
+                            <h2 className="text-xl font-black text-white tracking-tighter">MULTIPOLY <span className="text-green-500">TC</span></h2>
                             <div className="text-xs text-gray-400 mt-1 font-mono">CODE: {gameId}</div>
                         </div>
                         <div className="flex-grow overflow-y-auto p-4 space-y-3">
@@ -601,9 +607,7 @@
                                 <div key={p.id} className={`relative p-3 rounded-lg border transition-all ${gameState.currentPlayerIndex === idx ? 'bg-gray-700 border-green-500 shadow-lg scale-105' : 'bg-gray-700/50 border-gray-600'}`}>
                                     <div className="flex justify-between items-center">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-6 h-6 rounded-full border-2 border-white shadow flex items-center justify-center text-xs" style={{backgroundColor: p.color}}>
-                                                <i className="fas fa-user"></i>
-                                            </div>
+                                            <div className="w-6 h-6 rounded-full border-2 border-white shadow flex items-center justify-center text-xs" style={{backgroundColor: p.color}}><i className="fas fa-user"></i></div>
                                             <span className="font-bold text-white">{p.name}</span>
                                             {p.jail && <i className="fas fa-lock text-red-400"></i>}
                                         </div>
@@ -633,23 +637,26 @@
                                     ) : (
                                         <div className="text-center w-full max-w-xs relative z-10">
                                             <div className="mb-4 text-gray-400 text-xs font-bold tracking-widest uppercase">Tour de</div>
-                                            <div className="text-3xl font-black mb-6" style={{color: gameState.players[gameState.currentPlayerIndex].color}}>
-                                                {gameState.players[gameState.currentPlayerIndex].name}
-                                            </div>
+                                            <div className="text-3xl font-black mb-6" style={{color: gameState.players[gameState.currentPlayerIndex].color}}>{gameState.players[gameState.currentPlayerIndex].name}</div>
                                             
-                                            <div className="flex justify-center gap-4 mb-8">
+                                            <div className="flex justify-center gap-4 mb-6">
                                                 <div className="w-14 h-14 bg-white text-gray-900 rounded-lg flex items-center justify-center text-2xl font-bold shadow-xl border-b-4 border-gray-300">{gameState.lastDice[0]}</div>
                                                 <div className="w-14 h-14 bg-white text-gray-900 rounded-lg flex items-center justify-center text-2xl font-bold shadow-xl border-b-4 border-gray-300">{gameState.lastDice[1]}</div>
                                             </div>
 
                                             {isMyTurn && !gameState.currentEvent && (
                                                 <div className="space-y-2">
-                                                    <button onClick={rollDice} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg transform active:scale-95 transition flex items-center justify-center gap-2">
-                                                        <span>LANCER</span> <i className="fas fa-dice"></i>
+                                                    <button onClick={rollDice} disabled={isRolling} className={`w-full text-white font-bold py-3 rounded-xl shadow-lg transform active:scale-95 transition flex items-center justify-center gap-2 ${isRolling ? 'bg-gray-500 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'}`}>
+                                                        <span>{isRolling ? '...' : 'LANCER'}</span> <i className="fas fa-dice"></i>
                                                     </button>
-                                                    {canBuy && (
+                                                    {canBuy && !isRolling && (
                                                         <button onClick={buyProperty} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl shadow-lg transform active:scale-95 transition">
-                                                            ACHETER {currentSpace.name} ({currentSpace.price}€)
+                                                            ACHETER ({currentSpace.price}€)
+                                                        </button>
+                                                    )}
+                                                    {!isRolling && (
+                                                        <button onClick={() => setShowBuildMenu(true)} className="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-2 rounded-xl shadow-lg transform active:scale-95 transition text-sm">
+                                                            CONSTRUIRE 🏠
                                                         </button>
                                                     )}
                                                 </div>
@@ -658,22 +665,31 @@
                                     )}
                                 </div>
 
-                                {/* RENDU DES CASES */}
+                                {/* CASES */}
                                 {SPACES.map((space) => {
                                     const ownerId = gameState.owners[space.id];
                                     const owner = ownerId ? gameState.players.find(p => p.id === ownerId) : null;
-                                    const { gridColumn, gridRow, barClass, contentStyle } = getSpaceStyle(space.id);
+                                    const { gridColumn, gridRow, barClass, contentStyle, housesClass } = getSpaceStyle(space.id);
+                                    const houseCount = (gameState.houses && gameState.houses[space.id]) || 0;
                                     
                                     return (
                                         <div key={space.id} className="space" style={{gridColumn, gridRow, ...contentStyle}}>
-                                            {/* BARRE DE COULEUR ORIENTÉE */}
                                             {space.group && <div className={barClass} style={{ backgroundColor: space.color }}></div>}
-                                            
-                                            {/* OWNER OVERLAY */}
                                             {owner && <div className="absolute inset-0 border-4 z-0 opacity-30 pointer-events-none" style={{borderColor: owner.color}}></div>}
                                             
+                                            {/* MAISONS */}
+                                            {houseCount > 0 && (
+                                                <div className={housesClass}>
+                                                    {houseCount === 5 ? (
+                                                        <i className="fas fa-hotel hotel-icon"></i>
+                                                    ) : (
+                                                        [...Array(houseCount)].map((_, i) => <i key={i} className="fas fa-home house-icon"></i>)
+                                                    )}
+                                                </div>
+                                            )}
+                                            
                                             <div className="relative z-10 w-full h-full flex flex-col justify-center items-center">
-                                                <div className="space-name">
+                                                <div className="space-name px-1">
                                                     {space.type === 'chest' && <i className="fas fa-cube text-blue-500 text-lg mb-1 block"></i>}
                                                     {space.type === 'chance' && <i className="fas fa-question text-red-500 text-lg mb-1 block"></i>}
                                                     {space.type === 'railroad' && <i className="fas fa-train text-gray-600 text-lg mb-1 block"></i>}
@@ -683,23 +699,13 @@
                                                 {space.price && <div className="space-price">{space.price}€</div>}
                                             </div>
 
-                                            {/* Pions sur la case */}
                                             {gameState.players.filter(p => p.position === space.id).map((p, i) => {
                                                 const offsetClass = `token-stack-${i % 4}`;
                                                 const float = moneyFloats.find(f => f.playerId === p.id);
                                                 return (
-                                                    <div 
-                                                        key={p.id} 
-                                                        className={`player-token absolute top-1/2 left-1/2 ${offsetClass}`} 
-                                                        style={{ backgroundColor: p.color }}
-                                                        title={p.name}
-                                                    >
+                                                    <div key={p.id} className={`player-token absolute top-1/2 left-1/2 ${offsetClass}`} style={{ backgroundColor: p.color }} title={p.name}>
                                                         <i className="fas fa-user"></i>
-                                                        {float && (
-                                                            <div className="float-money" style={{color: float.color}}>
-                                                                {float.text}
-                                                            </div>
-                                                        )}
+                                                        {float && <div className="float-money" style={{color: float.color}}>{float.text}</div>}
                                                     </div>
                                                 );
                                             })}
