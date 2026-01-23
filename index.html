@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monopoly Online - Édition Balatro</title>
+    <title>Multipoly Online</title>
     
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -209,7 +209,7 @@
             { id: 7, name: "Tombola de Noël", type: "chance", color: "#f0f0f0" },
             { id: 8, name: "TC Wishes you a Happy New Year", price: 100, group: "lightblue", type: "property", color: "#87CEEB" },
             { id: 9, name: "TC Padel", price: 120, group: "lightblue", type: "property", color: "#87CEEB" },
-            { id: 10, name: "Prison", type: "jail", color: "#f0f0f0" },
+            { id: 10, name: "Régie C111 (Prison)", type: "jail", color: "#f0f0f0" },
             { id: 11, name: "Salle Z07", price: 140, group: "pink", type: "property", color: "#FF69B4" },
             { id: 12, name: "Bistro des Anges", price: 150, type: "utility", color: "#a1a1a1" },
             { id: 13, name: "Salle Z08", price: 140, group: "pink", type: "property", color: "#FF69B4" },
@@ -219,7 +219,7 @@
             { id: 17, name: "Vente DIVAM", type: "chest", color: "#f0f0f0" },
             { id: 18, name: "TC'loquence", price: 180, group: "orange", type: "property", color: "#FFA500" },
             { id: 19, name: "Négoselect", price: 200, group: "orange", type: "property", color: "#FFA500" },
-            { id: 20, name: "Parc Gratuit", type: "parking", color: "#f0f0f0" },
+            { id: 20, name: "Parking Place d'Erlon", type: "parking", color: "#f0f0f0" },
             { id: 21, name: "C111", price: 220, group: "red", type: "property", color: "#FF0000" },
             { id: 22, name: "Tombola de Noël", type: "chance", color: "#f0f0f0" },
             { id: 23, name: "Salle Z03", price: 220, group: "red", type: "property", color: "#FF0000" },
@@ -229,7 +229,7 @@
             { id: 27, name: "COCKTAILS DES PARTENAIRES", price: 260, group: "yellow", type: "property", color: "#FFD700" },
             { id: 28, name: "Conférence Banque de France", price: 150, type: "utility", color: "#a1a1a1" },
             { id: 29, name: "TC Partenaires", price: 280, group: "yellow", type: "property", color: "#FFD700" },
-            { id: 30, name: "ALLEZ EN PRISON", type: "gotojail", color: "#f0f0f0" },
+            { id: 30, name: "ALLEZ À LA RÉGIE", type: "gotojail", color: "#f0f0f0" },
             { id: 31, name: "Amphi A2", price: 300, group: "green", type: "property", color: "#008000" },
             { id: 32, name: "Av. Nathan Desplanche", price: 300, group: "green", type: "property", color: "#008000" },
             { id: 33, name: "Vente DIVAM", type: "chest", color: "#f0f0f0" },
@@ -388,8 +388,8 @@
                 <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
                     <div className="bg-gray-800 p-8 rounded-xl shadow-2xl max-w-md w-full border border-gray-700">
                         <div className="text-center mb-8">
-                            <h1 className="text-5xl font-black text-green-400 logo-text mb-2">MONOPOLY</h1>
-                            <span className="bg-blue-600 text-xs px-2 py-1 rounded uppercase tracking-widest font-bold">Édition Balatro</span>
+                            <h1 className="text-5xl font-black text-green-400 logo-text mb-2">MULTIPOLY</h1>
+                            <span className="bg-blue-600 text-xs px-2 py-1 rounded uppercase tracking-widest font-bold">Édition Online</span>
                         </div>
                         {error && <div className="bg-red-900/50 border border-red-500 text-red-200 p-3 rounded mb-4 text-sm">{error}</div>}
                         
@@ -593,7 +593,7 @@
                     {/* SIDEBAR */}
                     <div className="w-full md:w-80 bg-gray-800 border-r border-gray-700 flex flex-col z-20 shadow-xl">
                         <div className="p-4 bg-gray-900 border-b border-gray-700">
-                            <h2 className="text-xl font-black text-white tracking-tighter">MONOPOLY <span className="text-green-500">LIVE</span></h2>
+                            <h2 className="text-xl font-black text-white tracking-tighter">MULTIPOLY <span className="text-green-500">ÉDITION TC</span></h2>
                             <div className="text-xs text-gray-400 mt-1 font-mono">CODE: {gameId}</div>
                         </div>
                         <div className="flex-grow overflow-y-auto p-4 space-y-3">
