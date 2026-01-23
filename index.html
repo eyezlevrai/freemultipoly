@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monopoly Online - Édition Complète</title>
+    <title>Monopoly Online - Édition Balatro</title>
     
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -24,14 +24,16 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0fdf4; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1a202c; color: white; }
+        
+        /* --- PLATEAU --- */
         .board-container {
             width: 100%;
-            /* Le plateau prend le plus petit entre 900px et 90% de la hauteur de l'écran */
             max-width: min(900px, 90vh);
-            aspect-ratio: 1/1; /* Force le format carré */
+            aspect-ratio: 1/1;
             margin: 0 auto;
             position: relative;
+            perspective: 1000px;
         }
         .board-grid {
             display: grid;
@@ -40,63 +42,154 @@
             gap: 2px;
             width: 100%;
             height: 100%;
-            background: #cde6d0;
-            border: 8px solid #bfdbfe;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            background: #2d3748;
+            border: 8px solid #4a5568;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            border-radius: 8px;
         }
         .space {
             position: relative;
-            background: white;
-            border: 1px solid #333;
-            font-size: 0.65rem;
+            background: #edf2f7;
+            color: #2d3748;
+            border: 1px solid #cbd5e0;
+            font-size: 2.45rem;
             display: flex;
             flex-direction: column;
             text-align: center;
             overflow: hidden;
             user-select: none;
-            transition: transform 0.1s;
+            transition: transform 0.2s;
+            justify-content: center; /* Center text vertically by default */
         }
-        .space:hover {
-            z-index: 50;
-            transform: scale(1.05);
-            box-shadow: 0 0 10px rgba(0,0,0,0.2);
-        }
-        .color-bar { height: 20%; width: 100%; border-bottom: 1px solid #333; }
-        .space-name { flex-grow: 1; display: flex; align-items: center; justify-content: center; padding: 2px; font-weight: bold; line-height: 1.1; }
-        .space-price { font-size: 0.6rem; padding-bottom: 2px; color: #555; }
+        .space:hover { z-index: 10; transform: scale(1.1); box-shadow: 0 0 15px rgba(0,0,0,0.3); }
         
+        /* Barres de couleur positionnées absolument pour être toujours visibles */
+        .color-bar {
+            position: absolute;
+            z-index: 1;
+        }
+        
+        .space-name { font-size:0.5rem; line-height:0.4rem; z-index: 2; display: flex; align-items: center; justify-content: center; padding: 2px; font-weight: 700; line-height: 1; min-height: 20px; }
+        .space-price { z-index: 2; font-size: 0.6rem; padding-bottom: 2px; color: #4a5568; font-weight: bold; }
+        
+        /* --- PIONS (AMÉLIORÉS) --- */
         .player-token {
-            width: 14px; height: 14px; border-radius: 50%;
-            border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-            position: absolute; transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 10;
+            width: 28px; height: 28px; 
+            border-radius: 50%;
+            border: 3px solid white; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.6), inset 0 -2px 4px rgba(0,0,0,0.3);
+            position: absolute; 
+            transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); /* Effet rebond */
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: white;
+            transform: translate(-50%, -50%); /* Centrage précis */
+        }
+        /* Offset pour que les pions ne se chevauchent pas trop */
+        .token-stack-0 { margin-top: -5px; margin-left: -5px; }
+        .token-stack-1 { margin-top: -5px; margin-left: 5px; }
+        .token-stack-2 { margin-top: 5px; margin-left: -5px; }
+        .token-stack-3 { margin-top: 5px; margin-left: 5px; }
+
+        /* --- TEXTE FLOTTANT (ARGENT) --- */
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-40px) scale(1.2); }
+        }
+        .float-money {
+            position: absolute;
+            font-weight: bold;
+            font-size: 1.2rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            pointer-events: none;
+            animation: floatUp 2s forwards;
+            z-index: 100;
+        }
+
+        /* --- MODALES & CARTES (STYLE BALATRO) --- */
+        .modal-overlay {
+            position: absolute; inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 60;
+            display: flex; align-items: center; justify-content: center;
+            animation: fadeIn 0.3s;
+        }
+        
+        .card-balatro {
+            width: 220px; height: 320px;
+            background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
+            border-radius: 15px;
+            border: 8px solid #2d3748;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+            padding: 20px;
+            text-align: center;
+            transform-style: preserve-3d;
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+        .card-balatro::after {
+            content: ''; position: absolute; inset: 5px;
+            border: 2px dashed #cbd5e0; border-radius: 10px; pointer-events: none;
+        }
+        .card-title { font-family: 'Impact', sans-serif; font-size: 1.8rem; text-transform: uppercase; letter-spacing: 1px; }
+        .card-icon { font-size: 4rem; margin: 10px 0; filter: drop-shadow(2px 4px 0px rgba(0,0,0,0.2)); }
+        .card-desc { font-weight: bold; color: #4a5568; font-size: 1rem; line-height: 1.2; }
+        
+        .jail-stamp {
+            font-family: 'Black Ops One', cursive, sans-serif;
+            color: #e53e3e;
+            font-size: 4rem;
+            border: 8px solid #e53e3e;
+            padding: 20px;
+            border-radius: 10px;
+            transform: rotate(-15deg) scale(0);
+            animation: stampIn 0.4s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-shadow: 2px 2px 0px black;
+            background: rgba(255,255,255,0.9);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes popIn { 
+            0% { transform: scale(0.5) rotateY(90deg); opacity: 0; } 
+            100% { transform: scale(1) rotateY(0deg); opacity: 1; } 
+        }
+        @keyframes stampIn {
+            0% { transform: scale(2) rotate(-15deg); opacity: 0; }
+            100% { transform: scale(1) rotate(-15deg); opacity: 1; }
         }
 
         .center-board {
             grid-column: 2 / span 9;
             grid-row: 2 / span 9;
-            background: #ecfdf5;
+            background: #2d3748; /* Darker center */
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             padding: 20px;
-            overflow-y: auto;
             position: relative;
         }
         
         .logo-text {
             font-family: 'Arial Black', sans-serif;
             letter-spacing: -2px;
-            text-shadow: 2px 2px 0px rgba(0,0,0,0.1);
+            text-shadow: 4px 4px 0px #000;
+            color: white;
         }
 
-        /* Responsive adjustments */
+        /* Responsive */
         @media (max-width: 600px) {
-            .space-name { font-size: 0.5rem; }
+            .space-name { font-size: 0.5rem; display: none; }
             .space-price { display: none; }
             .board-grid { border-width: 2px; gap: 1px; }
             .logo-text { font-size: 1.5rem; }
+            .card-balatro { width: 180px; height: 260px; }
         }
     </style>
 </head>
@@ -104,59 +197,51 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        // --- DONNÉES DU JEU (40 Cases Standard) ---
+        // --- DONNÉES DU JEU (40 Cases) ---
         const SPACES = [
-            // LIGNE DU BAS (De Droite à Gauche)
-            { id: 0, name: "DÉPART", type: "go", color: "#f0f0f0" },
-            { id: 1, name: "Bd. de Belleville", price: 60, group: "brown", type: "property", color: "#8B4513" },
-            { id: 2, name: "Caisse de Communauté", type: "chest", color: "#f0f0f0" },
-            { id: 3, name: "Rue Lecourbe", price: 60, group: "brown", type: "property", color: "#8B4513" },
-            { id: 4, name: "Impôts sur le Revenu", price: 200, type: "tax", color: "#f0f0f0" },
-            { id: 5, name: "Gare Montparnasse", price: 200, type: "railroad", color: "#000000" },
-            { id: 6, name: "Rue de Vaugirard", price: 100, group: "lightblue", type: "property", color: "#87CEEB" },
-            { id: 7, name: "Chance", type: "chance", color: "#f0f0f0" },
-            { id: 8, name: "Rue de Courcelles", price: 100, group: "lightblue", type: "property", color: "#87CEEB" },
-            { id: 9, name: "Avenue de la République", price: 120, group: "lightblue", type: "property", color: "#87CEEB" },
-            
-            // LIGNE DE GAUCHE (De Bas en Haut)
-            { id: 10, name: "Prison / Visite", type: "jail", color: "#f0f0f0" },
-            { id: 11, name: "Bd. de la Villette", price: 140, group: "pink", type: "property", color: "#FF69B4" },
-            { id: 12, name: "Compagnie d'Électricité", price: 150, type: "utility", color: "#a1a1a1" },
-            { id: 13, name: "Avenue de Neuilly", price: 140, group: "pink", type: "property", color: "#FF69B4" },
-            { id: 14, name: "Rue de Paradis", price: 160, group: "pink", type: "property", color: "#FF69B4" },
-            { id: 15, name: "Gare de Lyon", price: 200, type: "railroad", color: "#000000" },
-            { id: 16, name: "Avenue Mozart", price: 180, group: "orange", type: "property", color: "#FFA500" },
-            { id: 17, name: "Caisse de Communauté", type: "chest", color: "#f0f0f0" },
-            { id: 18, name: "Bd. Saint-Michel", price: 180, group: "orange", type: "property", color: "#FFA500" },
-            { id: 19, name: "Place Pigalle", price: 200, group: "orange", type: "property", color: "#FFA500" },
-            
-            // LIGNE DU HAUT (De Gauche à Droite)
+            { id: 0, name: "Local", type: "go", color: "#f0f0f0" },
+            { id: 1, name: "Le QG", price: 60, group: "brown", type: "property", color: "#8B4513" },
+            { id: 2, name: "Vente DIVAM", type: "chest", color: "#f0f0f0" },
+            { id: 3, name: "Amphi Y4", price: 60, group: "brown", type: "property", color: "#8B4513" },
+            { id: 4, name: "Impôts David Lafolie", price: 200, type: "tax", color: "#f0f0f0" },
+            { id: 5, name: "Gare Opéra-Cathédrale", price: 200, type: "railroad", color: "#000000" },
+            { id: 6, name: "Rue Octobre Rose", price: 100, group: "lightblue", type: "property", color: "#87CEEB" },
+            { id: 7, name: "Tombola de Noël", type: "chance", color: "#f0f0f0" },
+            { id: 8, name: "TC Wishes you a Happy New Year", price: 100, group: "lightblue", type: "property", color: "#87CEEB" },
+            { id: 9, name: "TC Padel", price: 120, group: "lightblue", type: "property", color: "#87CEEB" },
+            { id: 10, name: "Prison", type: "jail", color: "#f0f0f0" },
+            { id: 11, name: "Salle Z07", price: 140, group: "pink", type: "property", color: "#FF69B4" },
+            { id: 12, name: "Bistro des Anges", price: 150, type: "utility", color: "#a1a1a1" },
+            { id: 13, name: "Salle Z08", price: 140, group: "pink", type: "property", color: "#FF69B4" },
+            { id: 14, name: "Salle Z09", price: 160, group: "pink", type: "property", color: "#FF69B4" },
+            { id: 15, name: "Gare Opéraims", price: 200, type: "railroad", color: "#000000" },
+            { id: 16, name: "La Grande Dictée", price: 180, group: "orange", type: "property", color: "#FFA500" },
+            { id: 17, name: "Vente DIVAM", type: "chest", color: "#f0f0f0" },
+            { id: 18, name: "TC'loquence", price: 180, group: "orange", type: "property", color: "#FFA500" },
+            { id: 19, name: "Négoselect", price: 200, group: "orange", type: "property", color: "#FFA500" },
             { id: 20, name: "Parc Gratuit", type: "parking", color: "#f0f0f0" },
-            { id: 21, name: "Avenue Matignon", price: 220, group: "red", type: "property", color: "#FF0000" },
-            { id: 22, name: "Chance", type: "chance", color: "#f0f0f0" },
-            { id: 23, name: "Bd. Malesherbes", price: 220, group: "red", type: "property", color: "#FF0000" },
-            { id: 24, name: "Avenue Henri-Martin", price: 240, group: "red", type: "property", color: "#FF0000" },
-            { id: 25, name: "Gare du Nord", price: 200, type: "railroad", color: "#000000" },
-            { id: 26, name: "Faubourg Saint-Honoré", price: 260, group: "yellow", type: "property", color: "#FFD700" },
-            { id: 27, name: "Avenue de la Bourse", price: 260, group: "yellow", type: "property", color: "#FFD700" },
-            { id: 28, name: "Compagnie des Eaux", price: 150, type: "utility", color: "#a1a1a1" },
-            { id: 29, name: "Rue la Fayette", price: 280, group: "yellow", type: "property", color: "#FFD700" },
-            
-            // LIGNE DE DROITE (De Haut en Bas)
+            { id: 21, name: "C111", price: 220, group: "red", type: "property", color: "#FF0000" },
+            { id: 22, name: "Tombola de Noël", type: "chance", color: "#f0f0f0" },
+            { id: 23, name: "Salle Z03", price: 220, group: "red", type: "property", color: "#FF0000" },
+            { id: 24, name: "D101", price: 240, group: "red", type: "property", color: "#FF0000" },
+            { id: 25, name: "Gare Centre", price: 200, type: "railroad", color: "#000000" },
+            { id: 26, name: "TC PRENNENT LEUR ENVOL", price: 260, group: "yellow", type: "property", color: "#FFD700" },
+            { id: 27, name: "COCKTAILS DES PARTENAIRES", price: 260, group: "yellow", type: "property", color: "#FFD700" },
+            { id: 28, name: "Conférence Banque de France", price: 150, type: "utility", color: "#a1a1a1" },
+            { id: 29, name: "TC Partenaires", price: 280, group: "yellow", type: "property", color: "#FFD700" },
             { id: 30, name: "ALLEZ EN PRISON", type: "gotojail", color: "#f0f0f0" },
-            { id: 31, name: "Avenue de Breteuil", price: 300, group: "green", type: "property", color: "#008000" },
-            { id: 32, name: "Avenue Foch", price: 300, group: "green", type: "property", color: "#008000" },
-            { id: 33, name: "Caisse de Communauté", type: "chest", color: "#f0f0f0" },
-            { id: 34, name: "Bd. des Capucines", price: 320, group: "green", type: "property", color: "#008000" },
-            { id: 35, name: "Gare Saint-Lazare", price: 200, type: "railroad", color: "#000000" },
-            { id: 36, name: "Chance", type: "chance", color: "#f0f0f0" },
-            { id: 37, name: "Avenue des Champs-Élysées", price: 350, group: "blue", type: "property", color: "#0000FF" },
-            { id: 38, name: "Taxe de Luxe", price: 100, type: "tax", color: "#f0f0f0" },
-            { id: 39, name: "Rue de la Paix", price: 400, group: "blue", type: "property", color: "#0000FF" },
+            { id: 31, name: "Amphi A2", price: 300, group: "green", type: "property", color: "#008000" },
+            { id: 32, name: "Av. Nathan Desplanche", price: 300, group: "green", type: "property", color: "#008000" },
+            { id: 33, name: "Vente DIVAM", type: "chest", color: "#f0f0f0" },
+            { id: 34, name: "Amphi Y3", price: 320, group: "green", type: "property", color: "#008000" },
+            { id: 35, name: "Gare BK Pont de Witry", price: 200, type: "railroad", color: "#000000" },
+            { id: 36, name: "Tombola de Noël", type: "chance", color: "#f0f0f0" },
+            { id: 37, name: "TC Noël", price: 350, group: "blue", type: "property", color: "#0000FF" },
+            { id: 38, name: "Remboursement Kadodis", price: 100, type: "tax", color: "#f0f0f0" },
+            { id: 39, name: "Les NégoMasters", price: 400, group: "blue", type: "property", color: "#0000FF" },
         ];
 
         // --- CONFIGURATION FIREBASE ---
-        // REMPLACER CECI POUR L'HÉBERGEMENT GITHUB PAGES
         const firebaseConfig = {
             apiKey: "AIzaSyC3z9jKfNADm6Qt0z2HXTskyvlEXoghS88",
             authDomain: "freemultipoly.firebaseapp.com",
@@ -166,26 +251,32 @@
             appId: "1:40208008932:web:cf1e842a3df7bc67d74ef1"
         };
 
+        // Cartes Chance (Exemples)
+        const CHANCE_CARDS = [
+            { text: "Rendez-vous rue de la Paix", money: 0, move: 39 },
+            { text: "Avancez jusqu'à la case Départ", money: 200, move: 0 },
+            { text: "La banque vous verse une dividende de 50€", money: 50, move: null },
+            { text: "Amende pour excès de vitesse : payez 15€", money: -15, move: null },
+            { text: "Reculez de trois cases", moveRel: -3, money: 0 }
+        ];
+
         let app, db, auth;
         try {
             if (typeof firebase !== 'undefined') {
                 const configToUse = (typeof __firebase_config !== 'undefined' && __firebase_config) 
                     ? JSON.parse(__firebase_config) 
                     : firebaseConfig; 
-                
-                if (!firebase.apps.length) {
-                    app = firebase.initializeApp(configToUse);
-                } else {
-                    app = firebase.app();
-                }
+                if (!firebase.apps.length) app = firebase.initializeApp(configToUse);
+                else app = firebase.app();
                 db = firebase.firestore(app);
                 auth = firebase.auth(app);
             }
-        } catch (e) {
-            console.error("Erreur init Firebase:", e);
-        }
+        } catch (e) { console.error(e); }
 
         const { useState, useEffect, useRef } = React;
+
+        // Helper pour attendre
+        const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
         function App() {
             const [user, setUser] = useState(null);
@@ -204,9 +295,7 @@
                         } else {
                             await auth.signInAnonymously();
                         }
-                    } catch(err) {
-                        setError("Erreur Auth: " + err.message);
-                    }
+                    } catch(err) { setError(err.message); }
                 };
                 initAuth();
                 const unsub = auth?.onAuthStateChanged(u => setUser(u));
@@ -219,24 +308,15 @@
                 const docRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('games').doc(gameId);
 
                 const unsub = docRef.onSnapshot((doc) => {
-                    if (doc.exists) {
-                        setGameState(doc.data());
-                    } else {
-                        setError("Partie introuvable (Code incorrect ?)");
-                        setGameId(""); 
-                    }
-                    setLoading(false);
-                }, (err) => {
-                    console.error(err);
-                    setError("Erreur de connexion.");
+                    if (doc.exists) setGameState(doc.data());
+                    else { setError("Partie introuvable"); setGameId(""); }
                     setLoading(false);
                 });
-
                 return () => unsub();
             }, [user, gameId]);
 
             const createGame = async () => {
-                if (!user || !playerName) return setError("Pseudo requis et connexion active nécessaire.");
+                if (!user || !playerName) return setError("Pseudo requis.");
                 setLoading(true);
                 const newGameId = Math.random().toString(36).substr(2, 6).toUpperCase();
                 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -256,35 +336,29 @@
                     log: [`${playerName} a créé la partie.`],
                     owners: {},
                     status: 'WAITING',
-                    lastDice: [0, 0]
+                    lastDice: [0, 0],
+                    currentEvent: null, // Pour gérer les affichages modaux
                 };
 
-                try {
-                    await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('games').doc(newGameId).set(initialState);
-                    setGameId(newGameId);
-                } catch(e) {
-                    setError("Erreur création: " + e.message);
-                    setLoading(false);
-                }
+                await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('games').doc(newGameId).set(initialState);
+                setGameId(newGameId);
             };
 
             const joinGame = async (codeInput) => {
                 if (!user || !playerName) return setError("Pseudo requis.");
-                const code = codeInput.trim().toUpperCase();
                 setLoading(true);
+                const code = codeInput.trim().toUpperCase();
                 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
                 const docRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('games').doc(code);
                 
                 try {
                     await db.runTransaction(async (t) => {
                         const doc = await t.get(docRef);
-                        if (!doc.exists) throw "Partie introuvable";
+                        if (!doc.exists) throw "Inexistante";
                         const data = doc.data();
+                        if (data.status !== 'WAITING') throw "Déjà commencée";
+                        if (data.players.find(p => p.id === user.uid)) return;
                         
-                        if (data.status !== 'WAITING') throw "Partie déjà en cours";
-                        if (data.players.find(p => p.id === user.uid)) return; 
-                        if (data.players.length >= 6) throw "Partie pleine";
-
                         const newPlayer = {
                             id: user.uid,
                             name: playerName,
@@ -294,97 +368,37 @@
                             jail: false,
                             properties: []
                         };
-
                         t.update(docRef, {
                             players: firebase.firestore.FieldValue.arrayUnion(newPlayer),
                             log: firebase.firestore.FieldValue.arrayUnion(`${playerName} a rejoint.`)
                         });
                     });
                     setGameId(code);
-                } catch (e) {
-                    setError(e.toString());
-                    setLoading(false);
-                }
+                } catch (e) { setError(e.toString()); setLoading(false); }
             };
 
-            if (!gameState) {
-                return (
-                    <Lobby 
-                        createGame={createGame} 
-                        joinGame={joinGame} 
-                        setPlayerName={setPlayerName} 
-                        playerName={playerName}
-                        error={error}
-                        user={user}
-                        loading={loading}
-                    />
-                );
-            }
-
-            return (
-                <GameTable 
-                    gameState={gameState} 
-                    user={user} 
-                    db={db}
-                    gameId={gameId}
-                />
-            );
+            if (!gameState) return <Lobby createGame={createGame} joinGame={joinGame} setPlayerName={setPlayerName} playerName={playerName} error={error} user={user} loading={loading} />;
+            return <GameTable gameState={gameState} user={user} db={db} gameId={gameId} />;
         }
 
+        // --- COMPOSANT LOBBY ---
         function Lobby({ createGame, joinGame, playerName, setPlayerName, error, user, loading }) {
             const [code, setCode] = useState("");
             return (
-                <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-100 to-blue-100">
-                    <div className="bg-white p-8 rounded-lg shadow-2xl max-w-md w-full border-t-8 border-green-600">
+                <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+                    <div className="bg-gray-800 p-8 rounded-xl shadow-2xl max-w-md w-full border border-gray-700">
                         <div className="text-center mb-8">
-                            <h1 className="text-5xl font-black text-green-800 logo-text">MONOPOLY</h1>
-                            <p className="text-gray-500 uppercase tracking-widest text-xs mt-2">Édition Online Multijoueur</p>
+                            <h1 className="text-5xl font-black text-green-400 logo-text mb-2">MONOPOLY</h1>
+                            <span className="bg-blue-600 text-xs px-2 py-1 rounded uppercase tracking-widest font-bold">Édition Balatro</span>
                         </div>
+                        {error && <div className="bg-red-900/50 border border-red-500 text-red-200 p-3 rounded mb-4 text-sm">{error}</div>}
                         
-                        {error && <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 rounded mb-4 text-sm">{error}</div>}
-                        {!user && <div className="text-center text-blue-600 animate-pulse mb-4">Connexion au serveur...</div>}
-
-                        <div className="space-y-5">
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">CHOISISSEZ UN PSEUDO</label>
-                                <input 
-                                    type="text" 
-                                    value={playerName} 
-                                    onChange={e => setPlayerName(e.target.value)}
-                                    className="block w-full rounded border-gray-300 bg-gray-50 shadow-sm p-3 border-2 focus:border-green-500 focus:outline-none transition"
-                                    placeholder="Ex: LeBaron"
-                                />
-                            </div>
-
-                            <button 
-                                onClick={createGame}
-                                disabled={!user || loading}
-                                className={`w-full font-bold py-4 px-4 rounded shadow-lg transform transition active:scale-95 ${(!user || loading) ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white'}`}
-                            >
-                                {loading ? 'Création...' : 'CRÉER UNE PARTIE'}
-                            </button>
-
-                            <div className="relative flex py-2 items-center">
-                                <div className="flex-grow border-t border-gray-300"></div>
-                                <span className="flex-shrink-0 mx-4 text-gray-400 text-xs font-bold">OU REJOINDRE</span>
-                                <div className="flex-grow border-t border-gray-300"></div>
-                            </div>
-
+                        <div className="space-y-4">
+                            <input type="text" value={playerName} onChange={e => setPlayerName(e.target.value)} className="block w-full rounded bg-gray-700 border-gray-600 text-white p-3 focus:border-green-500 focus:outline-none" placeholder="Votre Pseudo" />
+                            <button onClick={createGame} disabled={!user || loading} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded shadow-lg transition disabled:opacity-50">CRÉER UNE PARTIE</button>
                             <div className="flex gap-2">
-                                <input 
-                                    type="text" 
-                                    value={code}
-                                    onChange={e => setCode(e.target.value.toUpperCase())}
-                                    placeholder="CODE"
-                                    className="block w-24 text-center rounded border-gray-300 bg-gray-50 shadow-sm p-3 border-2 uppercase font-mono font-bold focus:border-blue-500 focus:outline-none"
-                                />
-                                <button 
-                                    onClick={() => joinGame(code)}
-                                    disabled={!user || loading}
-                                    className={`flex-1 font-bold py-3 px-6 rounded shadow-lg transform transition active:scale-95 ${(!user || loading) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
-                                >
-                                    {loading ? '...' : 'REJOINDRE'}
-                                </button>
+                                <input type="text" value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="CODE" className="block w-24 text-center rounded bg-gray-700 border-gray-600 text-white p-3 uppercase font-mono font-bold" />
+                                <button onClick={() => joinGame(code)} disabled={!user || loading} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded shadow-lg transition disabled:opacity-50">REJOINDRE</button>
                             </div>
                         </div>
                     </div>
@@ -392,244 +406,303 @@
             );
         }
 
+        // --- COMPOSANT JEU ---
         function GameTable({ gameState, user, db, gameId }) {
             const me = gameState.players.find(p => p.id === user.uid);
             const isMyTurn = gameState.status === 'PLAYING' && gameState.players[gameState.currentPlayerIndex].id === user.uid;
-            const isHost = gameState.players[0].id === user.uid;
+            const [moneyFloats, setMoneyFloats] = useState([]); // [{id, amount, x, y}]
+            const prevPlayersRef = useRef(gameState.players);
 
-            // --- FONCTION CRUCIALE POUR LE POSITIONNEMENT ---
-            // Calcule dynamiquement la grille pour les 40 cases
-            const getSpaceStyle = (index) => {
-                let gridColumn, gridRow;
-                
-                if (index >= 0 && index <= 10) { 
-                    // Ligne du BAS (droite vers gauche): 0 -> Col 11, 10 -> Col 1
-                    gridRow = 11;
-                    gridColumn = 11 - index;
-                } else if (index >= 11 && index <= 20) {
-                    // Ligne de GAUCHE (bas vers haut): 11 -> Row 10, 20 -> Row 1
-                    gridColumn = 1;
-                    gridRow = 11 - (index - 10);
-                } else if (index >= 21 && index <= 30) {
-                    // Ligne du HAUT (gauche vers droite): 21 -> Col 2, 30 -> Col 11
-                    gridRow = 1;
-                    gridColumn = 1 + (index - 20);
-                } else { // 31 to 39
-                    // Ligne de DROITE (haut vers bas): 31 -> Row 2, 39 -> Row 10
-                    gridColumn = 11;
-                    gridRow = 1 + (index - 30);
-                }
-                return { gridColumn, gridRow };
-            };
+            // Détection changement argent pour animation
+            useEffect(() => {
+                gameState.players.forEach((p, idx) => {
+                    const prev = prevPlayersRef.current.find(old => old.id === p.id);
+                    if (prev && prev.money !== p.money) {
+                        const diff = p.money - prev.money;
+                        const text = diff > 0 ? `+${diff}€` : `${diff}€`;
+                        const color = diff > 0 ? '#48bb78' : '#f56565'; // Green or Red
+                        // On ajoute une animation flottante
+                        const floatId = Date.now() + Math.random();
+                        setMoneyFloats(prev => [...prev, { id: floatId, text, color, playerId: p.id }]);
+                        setTimeout(() => setMoneyFloats(prev => prev.filter(f => f.id !== floatId)), 2000);
+                    }
+                });
+                prevPlayersRef.current = gameState.players;
+            }, [gameState.players]);
 
             const updateState = async (updates) => {
                 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('games').doc(gameId);
-                await ref.update(updates);
-            };
-
-            const startGame = () => {
-                updateState({ status: 'PLAYING', log: firebase.firestore.FieldValue.arrayUnion("--- DÉBUT DE LA PARTIE ---") });
+                await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('games').doc(gameId).update(updates);
             };
 
             const rollDice = async () => {
                 if (!isMyTurn) return;
+
+                // 1. Animation des dés (Phase Rolling)
                 
                 const d1 = Math.floor(Math.random() * 6) + 1;
                 const d2 = Math.floor(Math.random() * 6) + 1;
                 const total = d1 + d2;
 
+                // Update dés
+                await updateState({ lastDice: [d1, d2] });
+                await wait(800); // Suspense dés
+
                 let newPos = (me.position + total) % 40;
                 let passedGo = (me.position + total) >= 40;
                 let newMoney = me.money + (passedGo ? 200 : 0);
                 
-                let logMsg = `${me.name} lance ${d1}+${d2} = ${total}.`;
-                if(passedGo) logMsg += " (Départ +200€)";
+                // 2. Déplacement (Phase Moving)
+                let tempPlayers = gameState.players.map(p => p.id === user.uid ? { ...p, position: newPos, money: newMoney } : p);
+                await updateState({ players: tempPlayers });
+                await wait(1500); // Temps du déplacement du pion
 
+                // 3. Résolution Case
                 const space = SPACES[newPos];
-                let updates = { lastDice: [d1, d2] };
-                let playerUpdates = { position: newPos, money: newMoney };
+                let logMsg = `${me.name} : ${d1}+${d2} -> ${space.name}.`;
+                let finalUpdates = {};
 
+                // -- PRISON --
                 if (space.type === 'gotojail') {
-                    playerUpdates.position = 10;
-                    playerUpdates.jail = true;
-                    logMsg += " -> PRISON !";
-                } else if (space.type === 'tax') {
-                    playerUpdates.money -= space.price;
-                    logMsg += ` -> Paye taxe ${space.price}€.`;
-                } else if (gameState.owners[newPos] && gameState.owners[newPos] !== user.uid) {
-                    const ownerId = gameState.owners[newPos];
-                    const owner = gameState.players.find(p => p.id === ownerId);
-                    const rent = Math.floor(space.price * 0.15); // Loyer simplifié
-                    playerUpdates.money -= rent;
+                    await updateState({ currentEvent: { type: 'JAIL_ANIM', text: "DIRECTION PRISON !" } });
+                    await wait(2500); // Temps d'affichage du gros message
                     
-                    // Payer le propriétaire
-                    const updatedPlayers = gameState.players.map(p => {
-                        if (p.id === user.uid) return { ...p, ...playerUpdates };
+                    newPos = 10;
+                    tempPlayers = gameState.players.map(p => p.id === user.uid ? { ...p, position: 10, jail: true, money: newMoney } : p);
+                    finalUpdates['currentEvent'] = null;
+                } 
+                // -- CARTES (Chance / Caisse) --
+                else if (space.type === 'chance' || space.type === 'chest') {
+                    const card = CHANCE_CARDS[Math.floor(Math.random() * CHANCE_CARDS.length)];
+                    const title = space.type === 'chance' ? "CHANCE" : "CAISSE DE COM.";
+                    
+                    // Affiche la carte à tout le monde
+                    await updateState({ currentEvent: { type: 'CARD', title, text: card.text, icon: space.type === 'chance' ? 'question' : 'cube' } });
+                    await wait(4000); // Temps de lecture style Balatro
+
+                    if (card.money !== 0) newMoney += card.money;
+                    if (card.move !== undefined) {
+                        if (card.move === null) { /* no move */ }
+                        else newPos = card.move; 
+                    }
+                    if (card.moveRel) newPos = (newPos + card.moveRel + 40) % 40;
+
+                    tempPlayers = gameState.players.map(p => p.id === user.uid ? { ...p, position: newPos, money: newMoney } : p);
+                    finalUpdates['currentEvent'] = null;
+                    logMsg += ` Carte: ${card.text}`;
+                }
+                // -- TAXES --
+                else if (space.type === 'tax') {
+                    newMoney -= space.price;
+                    tempPlayers = gameState.players.map(p => p.id === user.uid ? { ...p, money: newMoney } : p);
+                }
+                // -- LOYER --
+                else if (gameState.owners[newPos] && gameState.owners[newPos] !== user.uid) {
+                    const ownerId = gameState.owners[newPos];
+                    const rent = Math.floor(space.price * 0.2); // Loyer plus méchant (20%)
+                    newMoney -= rent;
+                    tempPlayers = gameState.players.map(p => {
+                        if (p.id === user.uid) return { ...p, money: newMoney };
                         if (p.id === ownerId) return { ...p, money: p.money + rent };
                         return p;
                     });
-                    updates['players'] = updatedPlayers;
-                    logMsg += ` -> Loyer ${rent}€ à ${owner.name}.`;
-                    
-                    updates['log'] = firebase.firestore.FieldValue.arrayUnion(logMsg);
-                    if (d1 !== d2) updates['currentPlayerIndex'] = (gameState.currentPlayerIndex + 1) % gameState.players.length;
-                    
-                    await updateState(updates);
-                    return; // Sortie anticipée car on a géré les joueurs manuellement
+                    logMsg += ` Paye ${rent}€ de loyer.`;
                 }
 
-                updates['players'] = gameState.players.map(p => p.id === user.uid ? { ...p, ...playerUpdates } : p);
-                updates['log'] = firebase.firestore.FieldValue.arrayUnion(logMsg);
-                if (d1 !== d2) updates['currentPlayerIndex'] = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+                // Final commit
+                finalUpdates['players'] = tempPlayers;
+                finalUpdates['log'] = firebase.firestore.FieldValue.arrayUnion(logMsg);
+                if (d1 !== d2) finalUpdates['currentPlayerIndex'] = (gameState.currentPlayerIndex + 1) % gameState.players.length;
 
-                await updateState(updates);
+                await updateState(finalUpdates);
             };
 
             const buyProperty = async () => {
                 const space = SPACES[me.position];
-                if (!space.price || me.money < space.price || gameState.owners[me.position]) return;
-
+                if (!space.price || me.money < space.price) return;
                 const updates = {
                     [`owners.${me.position}`]: user.uid,
-                    players: gameState.players.map(p => 
-                        p.id === user.uid ? { ...p, money: p.money - space.price, properties: [...p.properties, me.position] } : p
-                    ),
-                    log: firebase.firestore.FieldValue.arrayUnion(`${me.name} achète ${space.name}.`)
+                    players: gameState.players.map(p => p.id === user.uid ? { ...p, money: p.money - space.price, properties: [...p.properties, me.position] } : p),
+                    log: firebase.firestore.FieldValue.arrayUnion(`${me.name} achète ${space.name} (${space.price}€)`)
                 };
                 await updateState(updates);
             };
 
-            return (
-                <div className="flex flex-col h-screen md:flex-row bg-gray-100 overflow-hidden font-sans">
-                    {/* SIDEBAR */}
-                    <div className="w-full md:w-80 bg-white border-r border-gray-300 flex flex-col shadow-xl z-20">
-                        <div className="p-4 bg-green-700 text-white shadow">
-                            <h2 className="font-bold text-xl tracking-tighter">MONOPOLY <span className="text-xs opacity-75 font-normal block">ONLINE</span></h2>
-                            <div className="mt-2 flex items-center justify-between bg-green-800 rounded p-2 text-sm">
-                                <span className="font-mono">{gameId}</span>
-                                <button className="hover:text-green-200" onClick={() => navigator.clipboard.writeText(gameId)}><i className="fas fa-copy"></i></button>
-                            </div>
-                        </div>
+            // Fonction positionnement grille
+            // --- POSITIONNEMENT AVEC BARRES DE COULEUR ORIENTÉES ---
+            const getSpaceStyle = (index) => {
+                let gridColumn, gridRow, barClass = "", contentStyle = {};
 
-                        <div className="flex-grow overflow-y-auto p-4 space-y-3">
-                            {gameState.status === 'WAITING' && (
-                                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
-                                    <p className="font-bold text-yellow-800 text-sm mb-2">SALLE D'ATTENTE</p>
-                                    <ul className="text-sm space-y-1">
-                                        {gameState.players.map(p => <li key={p.id} className="flex items-center"><span className="w-2 h-2 rounded-full mr-2" style={{background:p.color}}></span>{p.name}</li>)}
-                                    </ul>
-                                    {isHost && gameState.players.length > 1 && (
-                                        <button onClick={startGame} className="mt-4 w-full bg-green-600 text-white py-2 rounded text-sm font-bold shadow hover:bg-green-700">LANCER</button>
-                                    )}
+                if (index === 0) return { gridColumn: 11, gridRow: 11 }; // Go
+                if (index === 10) return { gridColumn: 1, gridRow: 11 }; // Jail
+                if (index === 20) return { gridColumn: 1, gridRow: 1 }; // Parking
+                if (index === 30) return { gridColumn: 11, gridRow: 1 }; // Go to Jail
+
+                // Common style for bar
+                const baseBar = "absolute z-10";
+
+                if (index < 10) {
+                    // BAS: Bar en haut
+                    gridRow = 11; gridColumn = 11 - index;
+                    barClass = `${baseBar} top-0 left-0 w-full h-1/4 border-b border-gray-400`;
+                    contentStyle = { paddingTop: '25%' };
+                } else if (index < 20) {
+                    // GAUCHE: Bar à droite
+                    gridColumn = 1; gridRow = 11 - (index - 10);
+                    barClass = `${baseBar} top-0 right-0 h-full w-1/4 border-l border-gray-400`;
+                    contentStyle = { paddingRight: '25%' };
+                } else if (index < 30) {
+                    // HAUT: Bar en bas
+                    gridRow = 1; gridColumn = 1 + (index - 20);
+                    barClass = `${baseBar} bottom-0 left-0 w-full h-1/4 border-t border-gray-400`;
+                    contentStyle = { paddingBottom: '25%' };
+                } else {
+                    // DROITE: Bar à gauche
+                    gridColumn = 11; gridRow = 1 + (index - 30);
+                    barClass = `${baseBar} top-0 left-0 h-full w-1/4 border-r border-gray-400`;
+                    contentStyle = { paddingLeft: '25%' };
+                }
+                
+                return { gridColumn, gridRow, barClass, contentStyle };
+            };
+
+            const currentSpace = SPACES[me.position];
+            const isOwned = gameState.owners[me.position];
+            const canBuy = isMyTurn && !isOwned && currentSpace.price && me.money >= currentSpace.price && !['chance','chest','tax','go','jail','parking','gotojail'].includes(currentSpace.type);
+
+            return (
+                <div className="flex flex-col h-screen md:flex-row bg-gray-900 overflow-hidden select-none">
+                    {/* MODAL EVENT OVERLAY */}
+                    {gameState.currentEvent && (
+                        <div className="modal-overlay">
+                            {gameState.currentEvent.type === 'JAIL_ANIM' && (
+                                <div className="jail-stamp">{gameState.currentEvent.text}</div>
+                            )}
+                            {gameState.currentEvent.type === 'CARD' && (
+                                <div className="card-balatro">
+                                    <div className="card-title text-gray-800">{gameState.currentEvent.title}</div>
+                                    <div className="card-icon text-blue-600">
+                                        <i className={`fas fa-${gameState.currentEvent.icon}`}></i>
+                                    </div>
+                                    <div className="card-desc">{gameState.currentEvent.text}</div>
                                 </div>
                             )}
+                        </div>
+                    )}
 
+                    {/* SIDEBAR */}
+                    <div className="w-full md:w-80 bg-gray-800 border-r border-gray-700 flex flex-col z-20 shadow-xl">
+                        <div className="p-4 bg-gray-900 border-b border-gray-700">
+                            <h2 className="text-xl font-black text-white tracking-tighter">MONOPOLY <span className="text-green-500">LIVE</span></h2>
+                            <div className="text-xs text-gray-400 mt-1 font-mono">CODE: {gameId}</div>
+                        </div>
+                        <div className="flex-grow overflow-y-auto p-4 space-y-3">
                             {gameState.players.map((p, idx) => (
-                                <div key={p.id} className={`relative p-3 rounded-lg border transition-all ${gameState.currentPlayerIndex === idx ? 'bg-white shadow-md border-green-500 ring-1 ring-green-500' : 'bg-gray-50 border-gray-200 opacity-80'}`}>
-                                    <div className="flex justify-between items-center mb-1">
-                                        <span className="font-bold text-gray-800 flex items-center">
-                                            <span className="w-3 h-3 rounded-full mr-2 shadow-sm" style={{backgroundColor: p.color}}></span>
-                                            {p.name}
-                                            {p.jail && <i className="fas fa-lock ml-2 text-gray-400"></i>}
-                                        </span>
-                                        <span className="font-mono font-bold text-green-700">{p.money} €</span>
+                                <div key={p.id} className={`relative p-3 rounded-lg border transition-all ${gameState.currentPlayerIndex === idx ? 'bg-gray-700 border-green-500 shadow-lg scale-105' : 'bg-gray-700/50 border-gray-600'}`}>
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-full border-2 border-white shadow flex items-center justify-center text-xs" style={{backgroundColor: p.color}}>
+                                                <i className="fas fa-user"></i>
+                                            </div>
+                                            <span className="font-bold text-white">{p.name}</span>
+                                            {p.jail && <i className="fas fa-lock text-red-400"></i>}
+                                        </div>
+                                        <span className={`font-mono font-bold ${p.money < 0 ? 'text-red-400' : 'text-green-400'}`}>{p.money} €</span>
                                     </div>
-                                    <div className="text-xs text-gray-500 pl-5">
-                                        {p.properties.length} terrains
-                                    </div>
-                                    {gameState.currentPlayerIndex === idx && <div className="absolute right-0 top-0 h-full w-1 bg-green-500 rounded-r"></div>}
                                 </div>
                             ))}
                         </div>
-
-                        <div className="bg-gray-900 text-gray-300 p-3 text-xs font-mono h-48 overflow-y-auto flex flex-col-reverse border-t border-gray-700">
-                            {gameState.log.slice().reverse().map((l, i) => (
-                                <div key={i} className="mb-1 border-b border-gray-800 pb-1">{l}</div>
-                            ))}
+                        <div className="h-40 bg-gray-900 p-2 text-xs font-mono text-gray-400 overflow-y-auto flex flex-col-reverse border-t border-gray-700">
+                            {gameState.log.slice().reverse().map((l, i) => <div key={i} className="mb-1 border-b border-gray-800 pb-1">> {l}</div>)}
                         </div>
                     </div>
 
                     {/* PLATEAU */}
-                    <div className="flex-1 bg-blue-50 p-4 flex items-center justify-center overflow-auto relative">
+                    <div className="flex-1 bg-gray-800 p-4 flex items-center justify-center relative overflow-hidden">
                         <div className="board-container">
                             <div className="board-grid">
-                                
-                                {/* CENTRE */}
                                 <div className="center-board">
-                                    {gameState.status === 'PLAYING' ? (
-                                        <div className="text-center w-full max-w-sm">
-                                            <div className="mb-6 p-4 bg-white rounded-xl shadow-sm border border-gray-100">
-                                                <p className="text-gray-500 text-xs uppercase tracking-wider mb-1">C'EST AU TOUR DE</p>
-                                                <h2 className="text-2xl font-black text-gray-800" style={{color: gameState.players[gameState.currentPlayerIndex].color}}>
-                                                    {gameState.players[gameState.currentPlayerIndex].name}
-                                                </h2>
+                                    {gameState.status === 'WAITING' ? (
+                                        <div className="text-center">
+                                            <h1 className="text-5xl font-black text-gray-600 mb-4 logo-text">PRÊT ?</h1>
+                                            {gameState.players[0].id === user.uid && gameState.players.length > 1 && (
+                                                <button onClick={() => updateState({status: 'PLAYING'})} className="px-6 py-3 bg-green-600 rounded text-white font-bold shadow-lg hover:bg-green-500 transition">LANCER</button>
+                                            )}
+                                            <p className="mt-4 text-gray-400 text-sm animate-pulse">En attente de joueurs...</p>
+                                        </div>
+                                    ) : (
+                                        <div className="text-center w-full max-w-xs relative z-10">
+                                            <div className="mb-4 text-gray-400 text-xs font-bold tracking-widest uppercase">Tour de</div>
+                                            <div className="text-3xl font-black mb-6" style={{color: gameState.players[gameState.currentPlayerIndex].color}}>
+                                                {gameState.players[gameState.currentPlayerIndex].name}
                                             </div>
-
+                                            
                                             <div className="flex justify-center gap-4 mb-8">
-                                                <div className="w-16 h-16 bg-white border-4 border-gray-800 rounded-lg flex items-center justify-center text-3xl font-bold shadow-lg transform rotate-3">{gameState.lastDice[0]}</div>
-                                                <div className="w-16 h-16 bg-white border-4 border-gray-800 rounded-lg flex items-center justify-center text-3xl font-bold shadow-lg transform -rotate-3">{gameState.lastDice[1]}</div>
+                                                <div className="w-14 h-14 bg-white text-gray-900 rounded-lg flex items-center justify-center text-2xl font-bold shadow-xl border-b-4 border-gray-300">{gameState.lastDice[0]}</div>
+                                                <div className="w-14 h-14 bg-white text-gray-900 rounded-lg flex items-center justify-center text-2xl font-bold shadow-xl border-b-4 border-gray-300">{gameState.lastDice[1]}</div>
                                             </div>
 
-                                            {isMyTurn && (
-                                                <div className="space-y-3">
-                                                    <button onClick={rollDice} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg shadow-lg transform transition active:scale-95 text-lg">
-                                                        LANCER LES DÉS 🎲
+                                            {isMyTurn && !gameState.currentEvent && (
+                                                <div className="space-y-2">
+                                                    <button onClick={rollDice} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg transform active:scale-95 transition flex items-center justify-center gap-2">
+                                                        <span>LANCER</span> <i className="fas fa-dice"></i>
                                                     </button>
-                                                    
-                                                    {(() => {
-                                                        const s = SPACES[me.position];
-                                                        const isOwned = gameState.owners[me.position];
-                                                        if (!isOwned && s.price && me.money >= s.price && s.type === 'property' || s.type === 'railroad' || s.type === 'utility') {
-                                                            return (
-                                                                <button onClick={buyProperty} className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg shadow-md transform transition active:scale-95">
-                                                                    ACHETER {s.name} ({s.price}€)
-                                                                </button>
-                                                            )
-                                                        }
-                                                    })()}
+                                                    {canBuy && (
+                                                        <button onClick={buyProperty} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl shadow-lg transform active:scale-95 transition">
+                                                            ACHETER {currentSpace.name} ({currentSpace.price}€)
+                                                        </button>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
-                                    ) : (
-                                        <h1 className="text-6xl text-gray-200 font-black transform -rotate-45 logo-text select-none">MONOPOLY</h1>
                                     )}
                                 </div>
 
-                                {/* CASES GÉNÉRÉES DYNAMIQUEMENT */}
+                                {/* RENDU DES CASES */}
                                 {SPACES.map((space) => {
                                     const ownerId = gameState.owners[space.id];
                                     const owner = ownerId ? gameState.players.find(p => p.id === ownerId) : null;
-                                    const style = getSpaceStyle(space.id);
-
+                                    const { gridColumn, gridRow, barClass, contentStyle } = getSpaceStyle(space.id);
+                                    
                                     return (
-                                        <div key={space.id} className="space" style={style}>
-                                            {space.group && (
-                                                <div className="color-bar" style={{ backgroundColor: space.color }}></div>
-                                            )}
-                                            {owner && (
-                                                <div className="absolute top-0 right-0 w-4 h-4 z-20 shadow-sm border border-white" style={{backgroundColor: owner.color}}></div>
-                                            )}
-                                            <div className="space-name">
-                                                {space.type === 'chest' && <i className="fas fa-cube text-blue-400 mb-1 block"></i>}
-                                                {space.type === 'chance' && <i className="fas fa-question text-red-400 mb-1 block"></i>}
-                                                {space.type === 'railroad' && <i className="fas fa-train mb-1 block"></i>}
-                                                {space.type === 'utility' && <i className="fas fa-lightbulb mb-1 block text-yellow-500"></i>}
-                                                {space.name}
-                                            </div>
-                                            {space.price && <div className="space-price font-mono">{space.price}€</div>}
+                                        <div key={space.id} className="space" style={{gridColumn, gridRow, ...contentStyle}}>
+                                            {/* BARRE DE COULEUR ORIENTÉE */}
+                                            {space.group && <div className={barClass} style={{ backgroundColor: space.color }}></div>}
                                             
-                                            {/* Pions */}
-                                            <div className="absolute bottom-1 left-0 w-full flex justify-center gap-1 flex-wrap px-1 pointer-events-none z-30">
-                                                {gameState.players.filter(p => p.position === space.id).map(p => (
+                                            {/* OWNER OVERLAY */}
+                                            {owner && <div className="absolute inset-0 border-4 z-0 opacity-30 pointer-events-none" style={{borderColor: owner.color}}></div>}
+                                            
+                                            <div className="relative z-10 w-full h-full flex flex-col justify-center items-center">
+                                                <div className="space-name">
+                                                    {space.type === 'chest' && <i className="fas fa-cube text-blue-500 text-lg mb-1 block"></i>}
+                                                    {space.type === 'chance' && <i className="fas fa-question text-red-500 text-lg mb-1 block"></i>}
+                                                    {space.type === 'railroad' && <i className="fas fa-train text-gray-600 text-lg mb-1 block"></i>}
+                                                    {space.type === 'utility' && <i className="fas fa-bolt text-yellow-500 text-lg mb-1 block"></i>}
+                                                    {space.name}
+                                                </div>
+                                                {space.price && <div className="space-price">{space.price}€</div>}
+                                            </div>
+
+                                            {/* Pions sur la case */}
+                                            {gameState.players.filter(p => p.position === space.id).map((p, i) => {
+                                                const offsetClass = `token-stack-${i % 4}`;
+                                                const float = moneyFloats.find(f => f.playerId === p.id);
+                                                return (
                                                     <div 
                                                         key={p.id} 
-                                                        className="player-token" 
+                                                        className={`player-token absolute top-1/2 left-1/2 ${offsetClass}`} 
                                                         style={{ backgroundColor: p.color }}
                                                         title={p.name}
-                                                    ></div>
-                                                ))}
-                                            </div>
+                                                    >
+                                                        <i className="fas fa-user"></i>
+                                                        {float && (
+                                                            <div className="float-money" style={{color: float.color}}>
+                                                                {float.text}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     );
                                 })}
