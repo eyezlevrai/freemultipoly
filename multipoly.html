@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multipoly Online</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0fdf4; }
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(11, 1fr);
+            grid-template-rows: repeat(11, 1fr);
+            gap: 2px;
+            aspect-ratio: 1/1;
+            width: 100%;
+            max-width: 900px;
+            background: #cde6d0;
+            border: 8px solid #bfdbfe;
+            margin: 0 auto;
+        }
+        .space {
+            position: relative;
+            background: white;
+            border: 1px solid #333;
+            font-size: 0.65rem;
+            display: flex;
+            flex-direction: column;
+            text-align: center;
+            overflow: hidden;
+            user-select: none;
+        }
+        .color-bar { height: 20%; width: 100%; border-bottom: 1px solid #333; }
+        .space-name { flex-grow: 1; display: flex; align-items: center; justify-content: center; padding: 2px; font-weight: bold; }
+        .space-price { font-size: 0.6rem; padding-bottom: 2px; }
+        .player-token {
+            width: 12px; height: 12px; border-radius: 50%;
+            border: 1px solid white; box-shadow: 0 0 2px black;
+            position: absolute; transition: all 0.5s ease;
+            z-index: 10;
+        }
+        /* Grid Positioning for Monopoly Loop */
+        .pos-0 { grid-column: 11; grid-row: 11; } /* Départ */
+        .pos-1 { grid-column: 10; grid-row: 11; }
+        .pos-2 { grid-column: 9; grid-row: 11; }
+        .pos-3 { grid-column: 8; grid-row: 11; }
+        .pos-4 { grid-column: 7; grid-row: 11; }
+        .pos-5 { grid-column: 6; grid-row: 11; }
+        .pos-6 { grid-column: 5; grid-row: 11; }
+        .pos-7 { grid-column: 4; grid-row: 11; }
+        .pos-8 { grid-column: 3; grid-row: 11; }
+        .pos-9 { grid-column: 2; grid-row: 11; }
+        .pos-10 { grid-column: 1; grid-row: 11; } /* Prison */
+        .pos-11 { grid-column: 1; grid-row: 10; }
+        .pos-12 { grid-column: 1; grid-row: 9; }
+        .pos-13 { grid-column: 1; grid-row: 8; }
+        .pos-14 { grid-column: 1; grid-row: 7; }
+        .pos-15 { grid-column: 1; grid-row: 6; }
+        .pos-16 { grid-column: 1; grid-row: 5; }
+        .pos-17 { grid-column: 1; grid-row: 4; }
+        .pos-18 { grid-column: 1; grid-row: 3; }
+        .pos-19 { grid-column: 1; grid-row: 2; }
+        .pos-20 { grid-column: 1; grid-row: 1; } /* Parc Gratuit */
+        .pos-21 { grid-column: 2; grid-row: 1; }
+        .pos-22 { grid-column: 3; grid-row: 1; }
+        .pos-23 { grid-column: 4; grid-row: 1; }
+        .pos-24 { grid-column: 5; grid-row: 1; }
+        .pos-25 { grid-column: 6; grid-row: 1; }
+        .pos-26 { grid-column: 7; grid-row: 1; }
+        .pos-27 { grid-column: 8; grid-row: 1; }
+        .pos-28 { grid-column: 9; grid-row: 1; }
+        .pos-29 { grid-column: 10; grid-row: 1; }
+        .pos-30 { grid-column: 11; grid-row: 1; } /* Allez en Prison */
+        .pos-31 { grid-column: 11; grid-row: 2; }
+        .pos-32 { grid-column: 11; grid-row: 3; }
+        .pos-33 { grid-column: 11; grid-row: 4; }
+        .pos-34 { grid-column: 11; grid-row: 5; }
+        .pos-35 { grid-column: 11; grid-row: 6; }
+        .pos-36 { grid-column: 11; grid-row: 7; }
+        .pos-37 { grid-column: 11; grid-row: 8; }
+        .pos-38 { grid-column: 11; grid-row: 9; }
+        .pos-39 { grid-column: 11; grid-row: 10; }
+
+        .center-board {
+            grid-column: 2 / span 9;
+            grid-row: 2 / span 9;
+            background: #ecfdf5;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        /* Responsive text */
+        @media (max-width: 600px) {
+            .space-name { display: none; }
+            .space-price { display: none; }
+            .board-grid { font-size: 8px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- DONNÉES DU JEU (Traduction Française Classique) ---
+        const SPACES = [
+            { id: 0, name: "DÉPART", type: "go", color: "#f0f0f0" },
+            { id: 1, name: "Bd. de Belleville", price: 60, group: "brown", type: "property", color: "#8B4513" },
+            { id: 2, name: "Caisse de Communauté", type: "chest", color: "#f0f0f0" },
+            { id: 3, name: "Rue Lecourbe", price: 60, group: "brown", type: "property", color: "#8B4513" },
+            { id: 4, name: "Impôts sur le Revenu", price: 200, type: "tax", color: "#f0f0f0" },
+            { id: 5, name: "Gare Montparnasse", price: 200, type: "railroad", color: "#000000" },
+            { id: 6, name: "Rue de Vaugirard", price: 100, group: "lightblue", type: "property", color: "#87CEEB" },
+            { id: 7, name: "Chance", type: "chance", color: "#f0f0f0" },
+            { id: 8, name: "Rue de Courcelles", price: 100, group: "lightblue", type: "property", color: "#87CEEB" },
+            { id: 9, name: "Avenue de la République", price: 120, group: "lightblue", type: "property", color: "#87CEEB" },
+            { id: 10, name: "Prison / Visite", type: "jail", color: "#f0f0f0" },
+            { id: 11, name: "Bd. de la Villette", price: 140, group: "pink", type: "property", color: "#FF69B4" },
+            { id: 12, name: "Compagnie d'Électricité", price: 150, type: "utility", color: "#a1a1a1" },
+            { id: 13, name: "Avenue de Neuilly", price: 140, group: "pink", type: "property", color: "#FF69B4" },
+            { id: 14, name: "Rue de Paradis", price: 160, group: "pink", type: "property", color: "#FF69B4" },
+            { id: 15, name: "Gare de Lyon", price: 200, type: "railroad", color: "#000000" },
+            { id: 16, name: "Avenue Mozart", price: 180, group: "orange", type: "property", color: "#FFA500" },
+            { id: 17, name: "Caisse de Communauté", type: "chest", color: "#f0f0f0" },
+            { id: 18, name: "Bd. Saint-Michel", price: 180, group: "orange", type: "property", color: "#FFA500" },
+            { id: 19, name: "Place Pigalle", price: 200, group: "orange", type: "property", color: "#FFA500" },
+            { id: 20, name: "Parc Gratuit", type: "parking", color: "#f0f0f0" },
+            { id: 21, name: "Avenue Matignon", price: 220, group: "red", type: "property", color: "#FF0000" },
+            { id: 22, name: "Chance", type: "chance", color: "#f0f0f0" },
+            { id: 23, name: "Bd. Malesherbes", price: 220, group: "red", type: "property", color: "#FF0000" },
+            { id: 24, name: "Avenue Henri-Martin", price: 240, group: "red", type: "property", color: "#FF0000" },
+            { id: 25, name: "Gare du Nord", price: 200, type: "railroad", color: "#000000" },
+            { id: 26, name: "Faubourg Saint-Honoré", price: 260, group: "yellow", type: "property", color: "#FFD700" },
+            { id: 27, name: "Avenue de la Bourse", price: 260, group: "yellow", type: "property", color: "#FFD700" },
+            { id: 28, name: "Compagnie des Eaux", price: 150, type: "utility", color: "#a1a1a1" },
+            { id: 29, name: "Rue la Fayette", price: 280, group: "yellow", type: "property", color: "#FFD700" },
+            { id: 30, name: "ALLEZ EN PRISON", type: "gotojail", color: "#f0f0f0" },
+            { id: 31, name: "Avenue de Breteuil", price: 300, group: "green", type: "property", color: "#008000" },
+            { id: 32, name: "Avenue Foch", price: 300, group: "green", type: "property", color: "#008000" },
+            { id: 33, name: "Caisse de Communauté", type: "chest", color: "#f0f0f0" },
+            { id: 34, name: "Bd. des Capucines", price: 320, group: "green", type: "property", color: "#008000" },
+            { id: 35, name: "Gare Saint-Lazare", price: 200, type: "railroad", color: "#000000" },
+            { id: 36, name: "Chance", type: "chance", color: "#f0f0f0" },
+            { id: 37, name: "Avenue des Champs-Élysées", price: 350, group: "blue", type: "property", color: "#0000FF" },
+            { id: 38, name: "Taxe de Luxe", price: 100, type: "tax", color: "#f0f0f0" },
+            { id: 39, name: "Rue de la Paix", price: 400, group: "blue", type: "property", color: "#0000FF" },
+        ];
+
+        // --- CONFIGURATION FIREBASE ---
+        // REMPLACER CECI POUR L'HÉBERGEMENT GITHUB PAGES
+        const firebaseConfig = {
+            apiKey: "AIzaSyC3z9jKfNADm6Qt0z2HXTskyvlEXoghS88",
+            authDomain: "freemultipoly.firebaseapp.com",
+            projectId: "freemultipoly",
+            storageBucket: "freemultipoly.firebasestorage.app",
+            messagingSenderId: "40208008932",
+            appId: "1:40208008932:web:cf1e842a3df7bc67d74ef1"
+        };
+
+        // Code pour gérer l'environnement de développement ou de production
+        let app, db, auth;
+        try {
+            if (typeof firebase !== 'undefined') {
+                // Utilise la config interne si dispo (Preview), sinon la config utilisateur (GitHub Pages)
+                const configToUse = (typeof __firebase_config !== 'undefined' && __firebase_config) 
+                    ? JSON.parse(__firebase_config) 
+                    : yourFirebaseConfig;
+                
+                if (!firebase.apps.length) {
+                    app = firebase.initializeApp(configToUse);
+                } else {
+                    app = firebase.app();
+                }
+                db = firebase.firestore(app);
+                auth = firebase.auth(app);
+            }
+        } catch (e) {
+            console.error("Erreur init Firebase:", e);
+        }
+
+        const { useState, useEffect, useMemo } = React;
+
+        // --- COMPOSANTS REACT ---
+
+        function App() {
+            const [user, setUser] = useState(null);
+            const [gameId, setGameId] = useState("");
+            const [gameState, setGameState] = useState(null);
+            const [error, setError] = useState("");
+            const [playerName, setPlayerName] = useState("");
+
+            useEffect(() => {
+                const initAuth = async () => {
+                    if (!auth) return;
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await auth.signInWithCustomToken(__initial_auth_token);
+                    } else {
+                        await auth.signInAnonymously();
+                    }
+                };
+                initAuth();
+                const unsub = auth?.onAuthStateChanged(u => setUser(u));
+                return () => unsub && unsub();
+            }, []);
+
+            // Souscrire aux changements du jeu
+            useEffect(() => {
+                if (!user || !gameId) return;
+
+                // Structure: /artifacts/{appId}/public/data/games/{gameId}
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const docRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('games').doc(gameId);
+
+                const unsub = docRef.onSnapshot((doc) => {
+                    if (doc.exists) {
+                        setGameState(doc.data());
+                    } else {
+                        setError("Partie introuvable.");
+                    }
+                }, (err) => {
+                    console.error("Erreur sync:", err);
+                    setError("Erreur de connexion à la partie.");
+                });
+
+                return () => unsub();
+            }, [user, gameId]);
+
+            const createGame = async () => {
+                if (!playerName) return setError("Entrez un pseudo !");
+                const newGameId = Math.random().toString(36).substr(2, 6).toUpperCase();
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                
+                const initialState = {
+                    id: newGameId,
+                    players: [{
+                        id: user.uid,
+                        name: playerName,
+                        money: 1500,
+                        position: 0,
+                        color: '#' + Math.floor(Math.random()*16777215).toString(16),
+                        jail: false,
+                        properties: [] // List of IDs owned
+                    }],
+                    currentPlayerIndex: 0,
+                    log: [`${playerName} a créé la partie.`],
+                    owners: {}, // Map spaceID -> userID
+                    houses: {}, // Map spaceID -> count (non implémenté pour MVP)
+                    status: 'WAITING', // WAITING, PLAYING
+                    lastDice: [0, 0]
+                };
+
+                await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('games').doc(newGameId).set(initialState);
+                setGameId(newGameId);
+            };
+
+            const joinGame = async (codeInput) => {
+                if (!playerName) return setError("Entrez un pseudo !");
+                const code = codeInput.trim().toUpperCase();
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const docRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('games').doc(code);
+                
+                // Transaction pour rejoindre en toute sécurité
+                try {
+                    await db.runTransaction(async (t) => {
+                        const doc = await t.get(docRef);
+                        if (!doc.exists) throw "Partie introuvable";
+                        const data = doc.data();
+                        
+                        if (data.status !== 'WAITING') throw "La partie a déjà commencé";
+                        if (data.players.find(p => p.id === user.uid)) return; // Déjà dedans
+
+                        if (data.players.length >= 6) throw "Partie pleine";
+
+                        const newPlayer = {
+                            id: user.uid,
+                            name: playerName,
+                            money: 1500,
+                            position: 0,
+                            color: '#' + Math.floor(Math.random()*16777215).toString(16),
+                            jail: false,
+                            properties: []
+                        };
+
+                        t.update(docRef, {
+                            players: firebase.firestore.FieldValue.arrayUnion(newPlayer),
+                            log: firebase.firestore.FieldValue.arrayUnion(`${playerName} a rejoint la partie.`)
+                        });
+                    });
+                    setGameId(code);
+                } catch (e) {
+                    setError(e.toString());
+                }
+            };
+
+            if (!gameState) {
+                return (
+                    <Lobby 
+                        createGame={createGame} 
+                        joinGame={joinGame} 
+                        setPlayerName={setPlayerName} 
+                        playerName={playerName}
+                        error={error}
+                    />
+                );
+            }
+
+            return (
+                <GameTable 
+                    gameState={gameState} 
+                    user={user} 
+                    db={db}
+                    gameId={gameId}
+                />
+            );
+        }
+
+        // --- ÉCRAN D'ACCUEIL / LOBBY ---
+        function Lobby({ createGame, joinGame, playerName, setPlayerName, error }) {
+            const [code, setCode] = useState("");
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-green-50">
+                    <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full border-t-8 border-green-600">
+                        <h1 className="text-4xl font-bold text-center mb-2 text-green-800">MULTIPOLY</h1>
+                        <p className="text-center text-gray-500 mb-6 uppercase tracking-widest text-xs">Édition Online</p>
+                        
+                        {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">{error}</div>}
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Votre Pseudo</label>
+                                <input 
+                                    type="text" 
+                                    value={playerName} 
+                                    onChange={e => setPlayerName(e.target.value)}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-3 border focus:border-green-500 focus:ring-green-500"
+                                    placeholder="Ex: Picsou"
+                                />
+                            </div>
+
+                            <div className="border-t border-gray-200 pt-4">
+                                <button 
+                                    onClick={createGame}
+                                    className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded transition"
+                                >
+                                    Créer une nouvelle partie
+                                </button>
+                            </div>
+
+                            <div className="relative flex py-2 items-center">
+                                <div className="flex-grow border-t border-gray-300"></div>
+                                <span className="flex-shrink-0 mx-4 text-gray-400">OU</span>
+                                <div className="flex-grow border-t border-gray-300"></div>
+                            </div>
+
+                            <div className="flex gap-2">
+                                <input 
+                                    type="text" 
+                                    value={code}
+                                    onChange={e => setCode(e.target.value.toUpperCase())}
+                                    placeholder="CODE PARTIE"
+                                    className="block w-full rounded-md border-gray-300 shadow-sm p-3 border uppercase font-mono"
+                                />
+                                <button 
+                                    onClick={() => joinGame(code)}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded transition"
+                                >
+                                    Rejoindre
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- PLATEAU DE JEU ---
+        function GameTable({ gameState, user, db, gameId }) {
+            const me = gameState.players.find(p => p.id === user.uid);
+            const isMyTurn = gameState.status === 'PLAYING' && gameState.players[gameState.currentPlayerIndex].id === user.uid;
+            const isHost = gameState.players[0].id === user.uid;
+
+            // Logique de mise à jour Firestore générique
+            const updateState = async (updates) => {
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('games').doc(gameId);
+                await ref.update(updates);
+            };
+
+            const startGame = () => {
+                updateState({ status: 'PLAYING', log: firebase.firestore.FieldValue.arrayUnion("La partie commence !") });
+            };
+
+            const rollDice = async () => {
+                if (!isMyTurn) return;
+                
+                const d1 = Math.floor(Math.random() * 6) + 1;
+                const d2 = Math.floor(Math.random() * 6) + 1;
+                const total = d1 + d2;
+
+                let newPos = (me.position + total) % 40;
+                let passedGo = (me.position + total) >= 40;
+                let newMoney = me.money + (passedGo ? 200 : 0);
+                
+                let logMsg = `${me.name} a fait ${d1}+${d2}=${total}.`;
+                if(passedGo) logMsg += " Passage au Départ (+200€).";
+
+                // Logique simplifiée d'atterrissage
+                const space = SPACES[newPos];
+                let updates = {
+                    lastDice: [d1, d2],
+                };
+
+                // Gestion Prison (case 30 -> envoie en 10)
+                if (space.type === 'gotojail') {
+                    newPos = 10;
+                    updates['players'] = gameState.players.map(p => 
+                        p.id === user.uid ? { ...p, position: 10, jail: true, money: newMoney } : p
+                    );
+                    logMsg += " Allez en Prison !";
+                } 
+                // Gestion Taxes
+                else if (space.type === 'tax') {
+                    newMoney -= space.price;
+                    logMsg += ` Taxe payée : ${space.price}€.`;
+                    updates['players'] = gameState.players.map(p => 
+                        p.id === user.uid ? { ...p, position: newPos, money: newMoney } : p
+                    );
+                }
+                // Gestion Loyer
+                else if (gameState.owners[newPos] && gameState.owners[newPos] !== user.uid) {
+                    const ownerId = gameState.owners[newPos];
+                    const owner = gameState.players.find(p => p.id === ownerId);
+                    
+                    // Calcul loyer basique (10% du prix pour simplifier ou valeur fixe)
+                    const rent = Math.floor(space.price * 0.15); // Loyer simplifié
+                    
+                    newMoney -= rent;
+                    logMsg += ` Loyer payé à ${owner.name} : ${rent}€.`;
+                    
+                    updates['players'] = gameState.players.map(p => {
+                        if (p.id === user.uid) return { ...p, position: newPos, money: newMoney };
+                        if (p.id === ownerId) return { ...p, money: p.money + rent };
+                        return p;
+                    });
+                }
+                else {
+                    // Mouvement simple
+                    updates['players'] = gameState.players.map(p => 
+                        p.id === user.uid ? { ...p, position: newPos, money: newMoney } : p
+                    );
+                }
+
+                updates['log'] = firebase.firestore.FieldValue.arrayUnion(logMsg);
+                
+                // Si pas de double, tour suivant (simplifié : pas de règle des 3 doubles)
+                if (d1 !== d2) {
+                   updates['currentPlayerIndex'] = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+                }
+
+                await updateState(updates);
+            };
+
+            const buyProperty = async () => {
+                const space = SPACES[me.position];
+                if (!space.price || me.money < space.price || gameState.owners[me.position]) return;
+
+                const updates = {
+                    [`owners.${me.position}`]: user.uid,
+                    players: gameState.players.map(p => 
+                        p.id === user.uid ? { ...p, money: p.money - space.price, properties: [...p.properties, me.position] } : p
+                    ),
+                    log: firebase.firestore.FieldValue.arrayUnion(`${me.name} a acheté ${space.name} pour ${space.price}€.`)
+                };
+                await updateState(updates);
+            };
+
+            const endTurn = async () => {
+                 await updateState({
+                    currentPlayerIndex: (gameState.currentPlayerIndex + 1) % gameState.players.length
+                 });
+            };
+
+            return (
+                <div className="flex flex-col h-screen md:flex-row overflow-hidden">
+                    {/* Colonne Gauche: Infos Jeu */}
+                    <div className="w-full md:w-1/4 bg-gray-100 p-4 border-r border-gray-300 flex flex-col gap-4 overflow-y-auto">
+                        <div className="bg-white p-3 rounded shadow">
+                            <h2 className="font-bold text-lg">Code: <span className="font-mono text-blue-600">{gameId}</span></h2>
+                            <button className="text-xs text-gray-500 hover:text-blue-500 underline" onClick={() => {
+                                navigator.clipboard.writeText(gameId);
+                                document.execCommand('copy');
+                            }}>Copier le code</button>
+                        </div>
+
+                        {gameState.status === 'WAITING' && (
+                            <div className="bg-yellow-50 p-4 rounded border border-yellow-200">
+                                <h3 className="font-bold mb-2">En attente de joueurs...</h3>
+                                <ul className="mb-4">
+                                    {gameState.players.map(p => <li key={p.id}>- {p.name}</li>)}
+                                </ul>
+                                {isHost && gameState.players.length > 1 && (
+                                    <button onClick={startGame} className="w-full bg-green-600 text-white py-2 rounded font-bold animate-pulse">
+                                        Lancer la partie
+                                    </button>
+                                )}
+                                {isHost && gameState.players.length < 2 && <p className="text-sm italic">Il faut au moins 2 joueurs.</p>}
+                            </div>
+                        )}
+
+                        <div className="flex-grow space-y-2">
+                            {gameState.players.map((p, idx) => (
+                                <div key={p.id} className={`p-3 rounded border-l-4 shadow-sm bg-white ${gameState.currentPlayerIndex === idx ? 'ring-2 ring-green-500' : ''}`} style={{ borderLeftColor: p.color }}>
+                                    <div className="flex justify-between items-center">
+                                        <span className="font-bold">{p.name} {p.jail ? '🔒' : ''}</span>
+                                        <span className="text-green-700 font-mono font-bold">{p.money} €</span>
+                                    </div>
+                                    <div className="text-xs text-gray-400 mt-1">
+                                        {p.properties.length} propriétés
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="bg-gray-800 text-green-400 p-3 rounded font-mono text-xs h-40 overflow-y-auto flex flex-col-reverse">
+                            {gameState.log.slice().reverse().map((l, i) => (
+                                <div key={i} className="mb-1 border-b border-gray-700 pb-1">> {l}</div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Zone Principale: Plateau */}
+                    <div className="flex-1 bg-gray-200 p-2 md:p-6 flex items-center justify-center overflow-auto">
+                        <div className="board-grid shadow-2xl">
+                            {/* Centre du plateau */}
+                            <div className="center-board text-center">
+                                {gameState.status === 'PLAYING' && (
+                                    <>
+                                        <h2 className="text-2xl font-bold mb-4">Tour de {gameState.players[gameState.currentPlayerIndex].name}</h2>
+                                        
+                                        {/* Dés */}
+                                        <div className="flex justify-center gap-4 mb-6">
+                                            <div className="w-12 h-12 bg-white border-2 border-black rounded flex items-center justify-center text-2xl font-bold">
+                                                {gameState.lastDice[0]}
+                                            </div>
+                                            <div className="w-12 h-12 bg-white border-2 border-black rounded flex items-center justify-center text-2xl font-bold">
+                                                {gameState.lastDice[1]}
+                                            </div>
+                                        </div>
+
+                                        {isMyTurn && (
+                                            <div className="space-y-3 w-full max-w-xs">
+                                                <button onClick={rollDice} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded shadow-lg transform active:scale-95 transition">
+                                                    Lancer les Dés 🎲
+                                                </button>
+                                                
+                                                {/* Bouton Acheter: Si terrain libre, achetable et assez d'argent */}
+                                                {(() => {
+                                                    const s = SPACES[me.position];
+                                                    const isOwned = gameState.owners[me.position];
+                                                    if (!isOwned && s.price && me.money >= s.price) {
+                                                        return (
+                                                            <button onClick={buyProperty} className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow">
+                                                                Acheter {s.name} ({s.price}€)
+                                                            </button>
+                                                        )
+                                                    }
+                                                })()}
+                                            </div>
+                                        )}
+                                        {!isMyTurn && <p className="text-gray-500 italic animate-pulse">En attente...</p>}
+                                    </>
+                                )}
+                                {gameState.status === 'WAITING' && <h1 className="text-4xl text-gray-300 font-bold rotate-12">MULTIPOLY</h1>}
+                            </div>
+
+                            {/* Cases du plateau */}
+                            {SPACES.map((space) => {
+                                const ownerId = gameState.owners[space.id];
+                                const owner = ownerId ? gameState.players.find(p => p.id === ownerId) : null;
+                                
+                                return (
+                                    <div key={space.id} className={`space pos-${space.id}`}>
+                                        {space.group && (
+                                            <div className="color-bar" style={{ backgroundColor: space.color }}></div>
+                                        )}
+                                        {owner && (
+                                            <div className="absolute top-0 right-0 w-3 h-3 border border-white z-20" style={{backgroundColor: owner.color}}></div>
+                                        )}
+                                        <div className="space-name px-1 leading-tight">
+                                            {space.type === 'chest' && <i className="fas fa-cube text-blue-500 mb-1"></i>}
+                                            {space.type === 'chance' && <i className="fas fa-question text-red-500 mb-1"></i>}
+                                            {space.type === 'railroad' && <i className="fas fa-train mb-1"></i>}
+                                            {space.type === 'utility' && <i className="fas fa-lightbulb mb-1"></i>}
+                                            {space.name}
+                                        </div>
+                                        {space.price && <div className="space-price font-mono">{space.price}€</div>}
+                                        
+                                        {/* Pions des joueurs */}
+                                        <div className="absolute bottom-1 left-0 w-full flex justify-center gap-1 flex-wrap px-1 pointer-events-none">
+                                            {gameState.players.filter(p => p.position === space.id).map(p => (
+                                                <div 
+                                                    key={p.id} 
+                                                    className="player-token" 
+                                                    style={{ backgroundColor: p.color }}
+                                                    title={p.name}
+                                                ></div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
