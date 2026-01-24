@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multipoly Online - Édition Suisse</title>
+    <title>Multipoly Online - Édition SumUp</title>
     
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -121,8 +121,8 @@
         .jail-stamp { font-family: 'Black Ops One', sans-serif; color: #e53e3e; font-size: 4rem; border: 8px solid #e53e3e; padding: 20px; border-radius: 10px; transform: rotate(-15deg); animation: stampIn 0.4s forwards; background: rgba(255,255,255,0.9); box-shadow: 0 10px 20px rgba(0,0,0,0.5); text-align: center; line-height: 1; }
 
         .swiss-modal {
-            background: #e53e3e; color: white; width: 300px; padding: 20px; border-radius: 10px; text-align: center;
-            box-shadow: 0 10px 30px rgba(229, 62, 62, 0.4);
+            background: #2563EB; color: white; width: 300px; padding: 20px; border-radius: 10px; text-align: center;
+            box-shadow: 0 10px 30px rgba(37, 99, 235, 0.4);
         }
         .swiss-modal input {
             color: black; font-size: 1.5rem; text-align: center; width: 100%; margin: 10px 0; padding: 10px; border-radius: 5px;
@@ -195,7 +195,7 @@
             { id: 32, name: "Av. Nathan Desplanche", price: 300, group: "green", type: "property", color: "#008000" },
             { id: 33, name: "Vente DIVAM", type: "chest", color: "#f0f0f0" },
             { id: 34, name: "Amphi Y3", price: 320, group: "green", type: "property", color: "#008000" },
-            { id: 35, name: "Gare BK Pont de Witry", price: 200, type: "railroad", color: "#000000" },
+            { id: 35, name: "BK Pont de Witry", price: 200, type: "railroad", color: "#000000" },
             { id: 36, name: "Tombola de Noël", type: "chance", color: "#f0f0f0" },
             { id: 37, name: "TC Noël", price: 350, group: "blue", type: "property", color: "#0000FF" },
             { id: 38, name: "Remboursement Kadodis", price: 100, type: "tax", color: "#f0f0f0" },
@@ -232,14 +232,30 @@
 
         const CHANCE_CARDS = [
             { text: "Vous vous êtes qualifié 1er au NégoMasters. Allez-y sans attendre.", money: 0, move: 39 },
-            { text: "Rendez-vous au local pour retrouver Corentin et Célestin.", money: 200, move: 0 },
+            { text: "Rendez-vous au local pour retrouver Corentin et Célestin.", money: 0, move: 0 },
             { text: "Vous avez remporté TC'loquence. Mr Lafolie vous verse 50€.", money: 50, move: null },
             { text: "Amende pour drift dans le parking : payez 15€.", money: -15, move: null },
-            { text: "Reculez de trois cases", moveRel: -3, money: 0 },
+            { text: "Reculez de trois salles Z", moveRel: -3, money: 0 },
             { text: "Vous êtes convoqué à la Régie. Allez-y sans attendre.", move: 10, money: 0 },
             { text: "Vous détournez l'argent de Tech&Co. Récupérez 200€.", money: 200, move: null },
-            { text: "Vous avez un date avec Nathan. Allez le retrouver à BK et payez 50€.", money: 50, move: 35 },
+            { text: "Vous avez un date avec Nathan. Allez le retrouver à BK et payez 50€.", money: -50, move: 35 },
             { text: "Vous devez déposer Mathéo à Gare Centre. Allez-y sans attendre.", money: 0, move: 25 },
+            { text: "Vous avez eu insuffisant en SaÉ. Payez 100€ la bouteille de champagne pour vous rattraper.", money: -100, move: null },
+            { text: "Vous devez remplir l'objectif Pépinière. Payez 50€.", money: -50, move: null },
+            { text: "Vous devez renouveller votre abonnement de bus. Payez 250€.", money: -250, move: null },
+            { text: "Vous partez en vacances au Mans avec Nathan. Payez 100€ de participation.", money: -100, move: null },
+            { text: "Vous remportez un évènement TC. Mr Lafolie vous verse 5€.", money: 5, move: null },
+            { text: "Vous croisez Mme Pieckarz dans la rue. Elle vous fait une réflexion raciste. Vous êtes dédommagé à hauteur de 100€.", money: 100, move: null },
+            { text: "Vous êtes convoqué en D101 par Mme Sadys. Allez-y sans attendre.", money: 0, move: 24 },
+            { text: "Vous vous rendez à TC Noël. Vous remportez un lot et le revendez pour 25€.", money: 25, move: 37 },
+            { text: "Vous devez ranger le local. Allez-y sans attendre, vous recevez 200€. (+ votre salaire si vous ne l'avez pas déjà reçu dans ce tour.)", money: 200, move: 0 },
+            { text: "Vous devez organiser TC Happy birthday Carla. Rendez-vous au Bistro des Anges et payez 5€ pour avoir le droit de faire le service.", money: -5, move: 12 },
+            { text: "Vous êtes passif en SaÉ. Mr Lafolie vous met un pressing.", money: 0, move: null },
+            { text: "You didn't get your internship, pay 100$.", money: -100, move: null },
+            { text: "Vous devez cotiser pour le permis à Corentin, payez 50€.", money: -50, move: null },
+            { text: "Mathéo à perdu 54€ de Tech&Co, il vous demande de payer à sa place.", money: -54, move: null },
+            { text: "Vous avez gagné le concours d'éloquence, mais Mr Lafolie à trouvé de l'IA dans votre texte. Remboursez la prime de 50€.", money: -50, move: null },
+            { text: "Erreur de comptabilité, remboursez 30€.", money: -30, move: null },
         ];
 
         let app, db, auth;
@@ -365,7 +381,7 @@
                     <div className="bg-gray-800 p-8 rounded-xl shadow-2xl max-w-md w-full border border-gray-700">
                         <div className="text-center mb-8">
                             <h1 className="text-5xl font-black text-green-400 logo-text mb-2">MULTIPOLY</h1>
-                            <span className="bg-blue-600 text-xs px-2 py-1 rounded uppercase tracking-widest font-bold">Édition Suisse</span>
+                            <span className="bg-blue-600 text-xs px-2 py-1 rounded uppercase tracking-widest font-bold">Édition SumUp</span>
                         </div>
                         {error && <div className="bg-red-900/50 border border-red-500 text-red-200 p-3 rounded mb-4 text-sm">{error}</div>}
                         <div className="space-y-4">
@@ -416,14 +432,47 @@
                 const amount = parseInt(swissAmount);
                 if (isNaN(amount) || amount <= 0 || me.money < amount) return;
                 
-                const updates = {
-                    players: gameState.players.map(p => p.id === user.uid ? { 
-                        ...p, 
-                        money: p.money - amount, 
-                        swissAccount: (p.swissAccount || 0) + amount 
-                    } : p),
-                    log: firebase.firestore.FieldValue.arrayUnion(`${me.name} place ${amount}€ en Suisse 🇨🇭`)
-                };
+                // 20% de chance de se faire attraper
+                const isCaught = Math.random() < 0.2;
+                
+                let updates = {};
+                
+                if (isCaught) {
+                    const isPrison = Math.random() < 0.5; // 50% prison, 50% amende
+                    
+                    if (isPrison) {
+                        // PRISON DIRECTE
+                        updates = {
+                            players: gameState.players.map(p => p.id === user.uid ? {
+                                ...p,
+                                position: 10,
+                                jail: true
+                            } : p),
+                            log: firebase.firestore.FieldValue.arrayUnion(`👮 ALERTE ! David Lafolie a repéré ${me.name} ! Direction la Régie ! (Virement annulé)`)
+                        };
+                    } else {
+                        // AMENDE (50% du virement perdu)
+                        const fine = Math.floor(amount * 0.5);
+                        updates = {
+                            players: gameState.players.map(p => p.id === user.uid ? {
+                                ...p,
+                                money: p.money - fine
+                            } : p),
+                            log: firebase.firestore.FieldValue.arrayUnion(`👮 ${me.name} s'est fait contrôler par David Lafolie ! Amende de ${fine}€ (Virement annulé)`)
+                        };
+                    }
+                } else {
+                    // RÉUSSITE
+                    updates = {
+                        players: gameState.players.map(p => p.id === user.uid ? { 
+                            ...p, 
+                            money: p.money - amount, 
+                            swissAccount: (p.swissAccount || 0) + amount 
+                        } : p),
+                        log: firebase.firestore.FieldValue.arrayUnion(`${me.name} place ${amount}€ sur son Compte SumUp 💳`)
+                    };
+                }
+                
                 await updateState(updates);
                 setShowSwissMenu(false);
                 setSwissAmount("");
@@ -527,7 +576,7 @@
                         if (nextIdx === 0) { // On a fini un tour complet de tous les joueurs
                             const nextRound = (gameState.round || 1) + 1;
                             finalUpdates['round'] = nextRound;
-                            if (nextRound > 30) {
+                            if (nextRound > 100) { // MODIFIE ICI: 100 TOURS
                                 finalUpdates['status'] = 'FINISHED';
                             }
                         }
@@ -667,7 +716,7 @@
                                 <div className="text-2xl mb-4">Le vainqueur est</div>
                                 <div className="text-6xl font-black mb-6" style={{color: winner.color}}>{winner.name}</div>
                                 <div className="text-xl font-mono bg-white/20 p-4 rounded mb-6">
-                                    Compte Suisse: {winner.swissAccount} €
+                                    Compte SumUp: {winner.swissAccount} €
                                 </div>
                                 <div className="text-sm opacity-75">
                                     (Argent plateau ignoré)
@@ -694,8 +743,8 @@
                     {showSwissMenu && (
                         <div className="modal-overlay" onClick={() => setShowSwissMenu(false)}>
                             <div className="swiss-modal" onClick={e => e.stopPropagation()}>
-                                <div className="text-xl font-bold mb-2">COMPTE SUISSE 🇨🇭</div>
-                                <p className="text-sm mb-4 opacity-90">Placez de l'argent en sécurité. Seul ce montant comptera à la fin !</p>
+                                <div className="text-xl font-bold mb-2">COMPTE SUMUP 💳</div>
+                                <p className="text-sm mb-4 opacity-90">Attention ! David Lafolie surveille les transactions SumUp (20% de risque).</p>
                                 <input 
                                     type="number" 
                                     value={swissAmount} 
@@ -768,10 +817,10 @@
                     {/* SIDEBAR */}
                     <div className="w-full md:w-80 bg-gray-800 border-r border-gray-700 flex flex-col z-20 shadow-xl">
                         <div className="p-4 bg-gray-900 border-b border-gray-700">
-                            <h2 className="text-xl font-black text-white tracking-tighter">MULTIPOLY <span className="text-green-500">TC Online</span></h2>
+                            <h2 className="text-xl font-black text-white tracking-tighter">MULTIPOLY <span className="text-green-500">TC</span></h2>
                             <div className="flex justify-between items-end mt-1">
                                 <span className="text-xs text-gray-400 font-mono">CODE: {gameId}</span>
-                                <span className="text-xs font-bold text-yellow-500 border border-yellow-500 px-2 rounded">TOUR {gameState.round || 1}/30</span>
+                                <span className="text-xs font-bold text-yellow-500 border border-yellow-500 px-2 rounded">TOUR {gameState.round || 1}/100</span>
                             </div>
                         </div>
                         <div className="flex-grow overflow-y-auto p-4 space-y-3">
@@ -789,7 +838,7 @@
                                     </div>
                                     {/* VISUALISATION SUISSE */}
                                     <div className="flex items-center justify-between bg-gray-800/50 p-1 rounded px-2">
-                                        <span className="text-xs text-gray-400"><i className="fas fa-landmark mr-1"></i> Suisse</span>
+                                        <span className="text-xs text-gray-400"><i className="fas fa-landmark mr-1"></i> SumUp</span>
                                         <span className="text-xs font-mono font-bold text-white">{p.swissAccount || 0} €</span>
                                     </div>
                                 </div>
@@ -849,8 +898,8 @@
                                                         <button onClick={() => setShowManageMenu(true)} disabled={isRolling} className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 rounded-xl shadow-lg text-sm">
                                                             GÉRER 💰
                                                         </button>
-                                                        <button onClick={() => setShowSwissMenu(true)} disabled={isRolling} className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded-xl shadow-lg text-sm flex items-center justify-center gap-1">
-                                                            SUISSE 🇨🇭
+                                                        <button onClick={() => setShowSwissMenu(true)} disabled={isRolling} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-xl shadow-lg text-sm flex items-center justify-center gap-1">
+                                                            SUMUP 💳
                                                         </button>
                                                     </div>
                                                 </div>
