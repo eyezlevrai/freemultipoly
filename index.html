@@ -230,6 +230,12 @@
     <div id="root"></div>
 
     <script type="text/babel">
+        // --- HELPER HORODATAGE ---
+        const getTimestamp = () => {
+            const now = new Date();
+            return `[${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}]`;
+        };
+
         // --- DONNÉES DU JEU ---
         const SPACES = [
             { id: 0, name: "Local", type: "go", color: "#f0f0f0" },
@@ -293,6 +299,17 @@
             return base;
         };
 
+        // --- HELPER NOUVEAU JOUEUR ---
+        const getNextPlayerIndex = (current, players) => {
+            let cnt = 0;
+            let idx = (current + 1) % players.length;
+            while (players[idx].money < -9000 && cnt < players.length) {
+                idx = (idx + 1) % players.length;
+                cnt++;
+            }
+            return idx;
+        };
+
         const firebaseConfig = {
             apiKey: "AIzaSyC3z9jKfNADm6Qt0z2HXTskyvlEXoghS88",
             authDomain: "freemultipoly.firebaseapp.com",
@@ -329,6 +346,7 @@
             { text: "Vous avez gagné le concours d'éloquence, mais Mr Lafolie à trouvé de l'IA dans votre texte. Remboursez la prime de 50€.", money: -50, move: null },
             { text: "Erreur de comptabilité, remboursez 30€.", money: -30, move: null },
             { text: "Madame Chevrier vous emprunte votre stylo. Vous ne le retrouverez jamais.", money: -1, move: null },
+            { text: "Monsieur Morel vous donne une astuce business. Vous vous faites 100€.", money: 100, move: null },
             { text: "Madame Thouin refuse de substituer votre stage, retournez au QG.", money: 0, move: 1 }
         ];
 
@@ -392,7 +410,7 @@
                     players: [{
                         id: user.uid,
                         name: playerName,
-                        money: 800,
+                        money: 1500,
                         swissAccount: 0,
                         position: 0,
                         color: finalColor,
@@ -400,7 +418,7 @@
                         properties: [] 
                     }],
                     currentPlayerIndex: 0,
-                    log: [`${playerName} a créé la partie.`],
+                    log: [`${getTimestamp()} ${playerName} a créé la partie.`],
                     owners: {},
                     houses: {},
                     mortgaged: {}, 
@@ -451,7 +469,7 @@
                                 players: newPlayers,
                                 owners: newOwners,
                                 trade: newTrade,
-                                log: firebase.firestore.FieldValue.arrayUnion(`${playerName} s'est reconnecté.`)
+                                log: firebase.firestore.FieldValue.arrayUnion(`${getTimestamp()} ${playerName} s'est reconnecté.`)
                             });
                             return;
                         }
@@ -464,7 +482,7 @@
                         const newPlayer = {
                             id: user.uid,
                             name: playerName,
-                            money: 800,
+                            money: 1500,
                             swissAccount: 0,
                             position: 0,
                             color: finalColor,
@@ -473,7 +491,7 @@
                         };
                         t.update(docRef, {
                             players: firebase.firestore.FieldValue.arrayUnion(newPlayer),
-                            log: firebase.firestore.FieldValue.arrayUnion(`${playerName} a rejoint.`)
+                            log: firebase.firestore.FieldValue.arrayUnion(`${getTimestamp()} ${playerName} a rejoint.`)
                         });
                     });
                     setGameId(code);
@@ -564,10 +582,19 @@
             // --- RISK LOGIC ---
             const getRiskProbability = (amount) => {
                 if (!amount) return 0;
-                if (amount <= 150) return 0.05; // 5%
-                if (amount <= 400) return 0.20; // 20%
-                if (amount <= 800) return 0.40; // 40%
-                return 0.60; // 60%
+                if (amount <= 50) return 0.05;
+                if (amount <= 100) return 0.10;
+                if (amount <= 150) return 0.15;
+                if (amount <= 200) return 0.25;
+                if (amount <= 250) return 0.33;
+                if (amount <= 300) return 0.45;
+                if (amount <= 350) return 0.55;
+                if (amount <= 400) return 0.65;
+                if (amount <= 450) return 0.70;
+                if (amount <= 500) return 0.80; 
+                if (amount <= 550) return 0.85;
+                if (amount <= 600) return 0.90;
+                return 0.95; // > 600
             };
 
             const getRiskColor = (prob) => {
@@ -638,7 +665,7 @@
                     [`owners.${spaceId}`]: user.uid,
                     [`mortgaged.${spaceId}`]: firebase.firestore.FieldValue.delete(),
                     players: newPlayers,
-                    log: firebase.firestore.FieldValue.arrayUnion(`${me.name} rachète la dette de ${space.name} à ${owner.name} ! (-${totalCost}€)`)
+                    log: firebase.firestore.FieldValue.arrayUnion(`${getTimestamp()} ${me.name} rachète la dette de ${space.name} à ${owner.name} ! (-${totalCost}€)`)
                 };
 
                 await updateState(updates);
@@ -679,6 +706,20 @@
 
                 const getProps = (uid) => Object.keys(newOwners).filter(k => newOwners[k] === uid).map(Number);
 
+                // --- DÉTAILS DE L'ÉCHANGE ---
+                const formatDetails = (money, props) => {
+                    let items = [];
+                    if (money > 0) items.push(`${money}€`);
+                    if (props && props.length > 0) {
+                        items.push(props.map(id => SPACES[id].name).join(", "));
+                    }
+                    return items.length > 0 ? items.join(" + ") : "Rien";
+                };
+
+                const initDetails = formatDetails(t.offerMoney, t.offerProps);
+                const targetDetails = formatDetails(t.reqMoney, t.reqProps);
+                const tradeLog = `${getTimestamp()} 🤝 Échange : ${initiator.name} [${initDetails}] ↔️ ${target.name} [${targetDetails}]`;
+
                 const updates = {
                     owners: newOwners,
                     trade: null,
@@ -691,13 +732,13 @@
                         }
                         return p;
                     }),
-                    log: firebase.firestore.FieldValue.arrayUnion(`🤝 Échange accepté entre ${initiator.name} et ${target.name}`)
+                    log: firebase.firestore.FieldValue.arrayUnion(tradeLog)
                 };
                 await updateState(updates);
             };
 
             const rejectTrade = async () => {
-                await updateState({ trade: null, log: firebase.firestore.FieldValue.arrayUnion(`🚫 Échange refusé par ${me.name}`) });
+                await updateState({ trade: null, log: firebase.firestore.FieldValue.arrayUnion(`${getTimestamp()} 🚫 Échange refusé par ${me.name}`) });
             };
 
             const toggleTradeProp = (id, listType) => {
@@ -715,7 +756,7 @@
                 setShowSwissMenu(false);
                 setSwissAmount("");
 
-                const isCaught = Math.random() < getRiskProbability(amount); 
+                const isCaught = Math.random() < getRiskProbability(amount); // Use dynamic probability here too
                 
                 let eventUpdate = {};
                 if (isCaught) {
@@ -725,14 +766,14 @@
                         eventUpdate = {
                             players: gameState.players.map(p => p.id === user.uid ? { ...p, position: 10, jail: true } : p),
                             currentEvent: { type: 'JAIL_ANIM', text: "FRAUDE DÉTECTÉE !" },
-                            log: firebase.firestore.FieldValue.arrayUnion(`👮 ALERTE ! David Lafolie a coincé ${me.name} ! (Virement annulé)`),
+                            log: firebase.firestore.FieldValue.arrayUnion(`${getTimestamp()} 👮 ALERTE ! David Lafolie a coincé ${me.name} ! (Virement annulé)`),
                             turnFlags: { sumUpUsed: true }
                         };
                     } else {
                         eventUpdate = {
                             players: gameState.players.map(p => p.id === user.uid ? { ...p, money: p.money - fine } : p),
                             currentEvent: { type: 'FINE_ANIM', amount: fine, player: me.name },
-                            log: firebase.firestore.FieldValue.arrayUnion(`👮 Amende de ${fine}€ pour ${me.name} ! (Virement annulé)`),
+                            log: firebase.firestore.FieldValue.arrayUnion(`${getTimestamp()} 👮 Amende de ${fine}€ pour ${me.name} ! (Virement annulé)`),
                             turnFlags: { sumUpUsed: true }
                         };
                     }
@@ -742,7 +783,7 @@
                 } else {
                     const updates = {
                         players: gameState.players.map(p => p.id === user.uid ? { ...p, money: p.money - amount, swissAccount: (p.swissAccount || 0) + amount } : p),
-                        log: firebase.firestore.FieldValue.arrayUnion(`${me.name} place ${amount}€ sur son Compte SumUp 💳`),
+                        log: firebase.firestore.FieldValue.arrayUnion(`${getTimestamp()} ${me.name} place ${amount}€ sur son Compte SumUp 💳`),
                         turnFlags: { sumUpUsed: true }
                     };
                     await updateState(updates);
@@ -765,21 +806,18 @@
                     await updateState({ players: tempPlayers });
                     await wait(1500); 
                     const space = SPACES[newPos];
-                    let logMsg = `${me.name} : ${d1}+${d2} -> ${space.name}.`;
+                    let logMsg = `${getTimestamp()} ${me.name} : ${d1}+${d2} -> ${space.name}.`;
                     let finalUpdates = {};
-                    
                     if (space.type === 'gotojail') {
                         await updateState({ currentEvent: { type: 'JAIL_ANIM', text: "DIRECTION LA RÉGIE !" } });
                         await wait(2500);
                         newPos = 10;
                         tempPlayers = gameState.players.map(p => p.id === user.uid ? { ...p, position: 10, jail: true, money: newMoney } : p);
                         finalUpdates['currentEvent'] = null;
-                        
                     } else if (space.type === 'chance' || space.type === 'chest') {
                         const card = CHANCE_CARDS[Math.floor(Math.random() * CHANCE_CARDS.length)];
                         await updateState({ currentEvent: { type: 'CARD', title: space.type === 'chance' ? "CHANCE" : "CAISSE", text: card.text, icon: space.type === 'chance' ? 'question' : 'cube' } });
                         await wait(4000);
-                        
                         if (card.money !== 0) newMoney += card.money;
                         if (card.move !== undefined) { if (card.move !== null) newPos = card.move; }
                         if (card.moveRel) newPos = (newPos + card.moveRel + 40) % 40;
@@ -790,7 +828,6 @@
                         let rentAmount = 0;
                         let rentRecipientId = null;
 
-                        // Si la carte a causé un déplacement réel
                         if ((card.move !== undefined && card.move !== null) || card.moveRel) {
                             logMsg += ` -> ${destSpace.name}`;
                             if (destSpace.type === 'gotojail') {
@@ -806,7 +843,6 @@
                                 const ownerId = gameState.owners[newPos];
                                 const owner = gameState.players.find(p => p.id === ownerId);
                                 const isMortgaged = gameState.mortgaged && gameState.mortgaged[newPos];
-                                
                                 if (!isMortgaged) {
                                     const houses = (gameState.houses && gameState.houses[newPos]) || 0;
                                     rentAmount = calculateRent(destSpace, houses);
@@ -835,7 +871,6 @@
                     } else if (space.type === 'tax') {
                         newMoney -= space.price;
                         tempPlayers = gameState.players.map(p => p.id === user.uid ? { ...p, position: newPos, money: newMoney, jail: false } : p);
-                        
                     } else if (gameState.owners[newPos] && gameState.owners[newPos] !== user.uid) {
                         const ownerId = gameState.owners[newPos];
                         const owner = gameState.players.find(p => p.id === ownerId);
@@ -855,15 +890,13 @@
                             logMsg += ` Terrain hypothéqué, pas de loyer.`;
                         }
                     } else {
-                         // Case vide ou propriété à soi
                          tempPlayers = gameState.players.map(p => p.id === user.uid ? { ...p, position: newPos, money: newMoney, jail: false } : p);
                     }
-                    
                     finalUpdates['players'] = tempPlayers;
                     finalUpdates['log'] = firebase.firestore.FieldValue.arrayUnion(logMsg);
-                    
                     if (d1 !== d2) {
-                        const nextIdx = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+                        // Use helper to skip dead players
+                        const nextIdx = getNextPlayerIndex(gameState.currentPlayerIndex, gameState.players);
                         finalUpdates['currentPlayerIndex'] = nextIdx;
                         finalUpdates['turnFlags'] = { sumUpUsed: false }; // RESET FLAGS ON TURN END
                         if (nextIdx === 0) {
@@ -882,7 +915,7 @@
                 const updates = {
                     [`owners.${me.position}`]: user.uid,
                     players: gameState.players.map(p => p.id === user.uid ? { ...p, money: p.money - space.price, properties: [...p.properties, me.position] } : p),
-                    log: firebase.firestore.FieldValue.arrayUnion(`${me.name} achète ${space.name}`)
+                    log: firebase.firestore.FieldValue.arrayUnion(`${getTimestamp()} ${me.name} achète ${space.name}`)
                 };
                 await updateState(updates);
             };
@@ -890,13 +923,21 @@
             const buildHouse = async (spaceId) => {
                 const space = SPACES[spaceId];
                 const cost = getHouseCost(space.group);
-                if (me.money < cost) return;
+                
                 const currentHouses = (gameState.houses && gameState.houses[spaceId]) || 0;
+                
+                let actualCost = cost;
+                if (currentHouses === 4) {
+                    actualCost = Math.floor(cost * 2.5);
+                }
+
+                if (me.money < actualCost) return;
                 if (currentHouses >= 5) return;
+
                 const updates = {
                     [`houses.${spaceId}`]: currentHouses + 1,
-                    players: gameState.players.map(p => p.id === user.uid ? { ...p, money: p.money - cost } : p),
-                    log: firebase.firestore.FieldValue.arrayUnion(`${me.name} construit sur ${space.name}`)
+                    players: gameState.players.map(p => p.id === user.uid ? { ...p, money: p.money - actualCost } : p),
+                    log: firebase.firestore.FieldValue.arrayUnion(`${getTimestamp()} ${me.name} construit ${currentHouses === 4 ? "un Hôtel" : "une maison"} sur ${space.name} (-${actualCost}€)`)
                 };
                 await updateState(updates);
             };
@@ -905,11 +946,17 @@
                 const space = SPACES[spaceId];
                 const currentHouses = (gameState.houses && gameState.houses[spaceId]) || 0;
                 if (currentHouses <= 0) return;
+                
                 const cost = getHouseCost(space.group);
-                const sellPrice = Math.floor(cost / 2);
+                let sellPrice = Math.floor(cost / 2);
+
+                if (currentHouses === 5) {
+                    sellPrice = Math.floor((cost * 2.5) / 2);
+                }
+
                 const updates = {
                     players: gameState.players.map(p => p.id === user.uid ? { ...p, money: p.money + sellPrice } : p),
-                    log: firebase.firestore.FieldValue.arrayUnion(`${me.name} vend une maison sur ${space.name} (+${sellPrice}€)`)
+                    log: firebase.firestore.FieldValue.arrayUnion(`${getTimestamp()} ${me.name} vend ${currentHouses === 5 ? "un Hôtel" : "une maison"} sur ${space.name} (+${sellPrice}€)`)
                 };
                 if (currentHouses === 1) updates[`houses.${spaceId}`] = firebase.firestore.FieldValue.delete();
                 else updates[`houses.${spaceId}`] = currentHouses - 1;
@@ -925,7 +972,7 @@
                     const updates = {
                         [`mortgaged.${spaceId}`]: true,
                         players: gameState.players.map(p => p.id === user.uid ? { ...p, money: p.money + mortgageValue } : p),
-                        log: firebase.firestore.FieldValue.arrayUnion(`${me.name} hypothèque ${space.name} (+${mortgageValue}€)`)
+                        log: firebase.firestore.FieldValue.arrayUnion(`${getTimestamp()} ${me.name} hypothèque ${space.name} (+${mortgageValue}€)`)
                     };
                     await updateState(updates);
                 } else {
@@ -933,24 +980,30 @@
                     const updates = {
                         [`mortgaged.${spaceId}`]: firebase.firestore.FieldValue.delete(),
                         players: gameState.players.map(p => p.id === user.uid ? { ...p, money: p.money - liftCost } : p),
-                        log: firebase.firestore.FieldValue.arrayUnion(`${me.name} lève l'hypothèque de ${space.name} (-${liftCost}€)`)
+                        log: firebase.firestore.FieldValue.arrayUnion(`${getTimestamp()} ${me.name} lève l'hypothèque de ${space.name} (-${liftCost}€)`)
                     };
                     await updateState(updates);
                 }
             };
             
             const surrender = async () => {
+                 if (me.money === -9999) return; // Already surrendered
+
+                 const updatedPlayers = gameState.players.map(p => p.id === user.uid ? { ...p, money: -9999 } : p);
+                 const nextIdx = getNextPlayerIndex(gameState.currentPlayerIndex, updatedPlayers);
+
                  let updates = {
-                     players: gameState.players.map(p => p.id === user.uid ? { ...p, name: `💀 ${p.name}`, money: -9999, swissAccount: 0 } : p),
-                     log: firebase.firestore.FieldValue.arrayUnion(`${me.name} a déclaré forfait !`)
+                     players: gameState.players.map(p => p.id === user.uid ? { ...p, name: p.name.startsWith('💀') ? p.name : `💀 ${p.name}`, money: -9999, swissAccount: 0 } : p),
+                     log: firebase.firestore.FieldValue.arrayUnion(`${getTimestamp()} ${me.name} a déclaré forfait !`),
+                     currentPlayerIndex: nextIdx // Pass turn immediately
                  };
                  me.properties.forEach(pid => {
                      updates[`owners.${pid}`] = firebase.firestore.FieldValue.delete();
                      updates[`houses.${pid}`] = firebase.firestore.FieldValue.delete();
                      updates[`mortgaged.${pid}`] = firebase.firestore.FieldValue.delete();
                  });
-                 if (isMyTurn) updates['currentPlayerIndex'] = (gameState.currentPlayerIndex + 1) % gameState.players.length;
-                 const activePlayers = gameState.players.filter(p => p.money > -9000 && p.id !== user.uid);
+                 
+                 const activePlayers = updatedPlayers.filter(p => p.money > -9000);
                  if (activePlayers.length <= 1) updates['status'] = 'FINISHED';
                  await updateState(updates);
             };
@@ -1029,10 +1082,18 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr><td>0 - 150 €</td><td className="risk-low">5%</td></tr>
-                                            <tr><td>151 - 400 €</td><td className="risk-med">20%</td></tr>
-                                            <tr><td>401 - 800 €</td><td className="risk-high">40%</td></tr>
-                                            <tr><td>800+ €</td><td className="risk-crit">60%</td></tr>
+                                            <tr><td>0 - 50 €</td><td className="risk-low">5%</td></tr>
+                                            <tr><td>51 - 100 €</td><td className="risk-low">10%</td></tr>
+                                            <tr><td>101 - 150 €</td><td className="risk-low">15%</td></tr>
+                                            <tr><td>151 - 200 €</td><td className="risk-med">25%</td></tr>
+                                            <tr><td>201 - 250 €</td><td className="risk-med">33%</td></tr>
+                                            <tr><td>251 - 300 €</td><td className="risk-med">45%</td></tr>
+                                            <tr><td>301 - 350 €</td><td className="risk-high">55%</td></tr>
+                                            <tr><td>351 - 400 €</td><td className="risk-high">65%</td></tr>
+                                            <tr><td>401 - 450 €</td><td className="risk-high">70%</td></tr>
+                                            <tr><td>500 - 550 €</td><td className="risk-crit">80%</td></tr>
+                                            <tr><td>551 - 600 €</td><td className="risk-crit">85%</td></tr>
+                                            <tr><td>601 € et +</td><td className="risk-crit">90%</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -1283,12 +1344,14 @@
                                 <div className="modal-body">
                                     {buildableProperties.length === 0 ? <p className="text-gray-500 text-center p-4">Monopole requis.</p> : buildableProperties.map(s => {
                                         const h = (gameState.houses && gameState.houses[s.id]) || 0;
-                                        const cost = getHouseCost(s.group);
-                                        const canAfford = me.money >= cost;
+                                        const baseCost = getHouseCost(s.group);
+                                        // PRIX HOTEL = 2.5x MAISON
+                                        const upgradeCost = (h === 4) ? Math.floor(baseCost * 2.5) : baseCost;
+                                        const canAfford = me.money >= upgradeCost;
                                         const isMortgaged = gameState.mortgaged && gameState.mortgaged[s.id];
                                         return (
                                             <div key={s.id} className="modal-item">
-                                                <div className="flex flex-col"><span className="font-bold">{s.name}</span><span className="text-xs text-gray-500">{h===5?'Hôtel':`${h} Maisons`} | {cost}€</span></div>
+                                                <div className="flex flex-col"><span className="font-bold">{s.name}</span><span className="text-xs text-gray-500">{h===5?'Hôtel':`${h} Maisons`} | Coût: {upgradeCost}€</span></div>
                                                 {h < 5 && !isMortgaged && <button disabled={!canAfford} onClick={() => buildHouse(s.id)} className={`px-3 py-1 rounded text-sm ${canAfford?'bg-green-600 text-white':'bg-gray-300 text-gray-500'}`}>{h===4?'Hôtel':'+1 🏠'}</button>}
                                                 {isMortgaged && <span className="text-red-500 text-xs font-bold">HYPOTHÉQUÉ</span>}
                                             </div>
@@ -1311,7 +1374,10 @@
                                         const cost = Math.floor(val * 1.1);
                                         const hasHouses = (gameState.houses && gameState.houses[s.id]) > 0;
                                         const houseCount = (gameState.houses && gameState.houses[s.id]) || 0;
-                                        const houseSellPrice = Math.floor(getHouseCost(s.group) / 2);
+                                        
+                                        // Selling Hotel = (2.5x base) / 2
+                                        const baseCost = getHouseCost(s.group);
+                                        const houseSellPrice = (houseCount === 5) ? Math.floor((baseCost * 2.5) / 2) : Math.floor(baseCost / 2);
 
                                         return (
                                             <div key={s.id} className="modal-item">
@@ -1401,8 +1467,12 @@
                                                 <div className="space-y-2">
                                                     {isBankrupt ? (
                                                         <div className="bg-red-600 text-white p-3 rounded font-bold animate-pulse mb-2">
-                                                            EN FAILLITE ! Hypothéquez pour rembourser.
-                                                            <button onClick={surrender} className="block w-full mt-2 bg-black text-xs py-1 rounded">ABANDONNER</button>
+                                                            {hasSurrendered ? "SPECTATEUR" : (
+                                                                <>
+                                                                    EN FAILLITE ! Hypothéquez pour rembourser.
+                                                                    <button onClick={surrender} className="block w-full mt-2 bg-black text-xs py-1 rounded">ABANDONNER</button>
+                                                                </>
+                                                            )}
                                                         </div>
                                                     ) : (
                                                         <button onClick={rollDice} disabled={isRolling} className={`w-full text-white font-bold py-3 rounded-xl shadow-lg transform active:scale-95 transition flex items-center justify-center gap-2 ${isRolling ? 'bg-gray-500 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'}`}>
@@ -1416,23 +1486,27 @@
                                                         </button>
                                                     )}
                                                     
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        <button onClick={() => setShowBuildMenu(true)} disabled={isRolling} className="bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-2 rounded-xl shadow-lg text-sm">
-                                                            BATIR 🏠
-                                                        </button>
-                                                        <button onClick={() => setShowManageMenu(true)} disabled={isRolling} className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 rounded-xl shadow-lg text-sm">
-                                                            GÉRER 💰
-                                                        </button>
-                                                        <button onClick={() => setShowBuyoutMenu(true)} disabled={isRolling} className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded-xl shadow-lg text-sm">
-                                                            RACHATS 💸
-                                                        </button>
-                                                        <button onClick={() => setShowTradeMenu(true)} disabled={isRolling} className="bg-teal-600 hover:bg-teal-500 text-white font-bold py-2 rounded-xl shadow-lg text-sm">
-                                                            ÉCHANGER 🤝
-                                                        </button>
-                                                    </div>
-                                                    <button onClick={() => setShowSwissMenu(true)} disabled={isRolling || sumUpUsed} className={`w-full text-white font-bold py-2 rounded-xl shadow-lg text-sm flex items-center justify-center gap-1 ${sumUpUsed ? 'bg-gray-500 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'}`}>
-                                                        SUMUP 💳
-                                                    </button>
+                                                    {!hasSurrendered && (
+                                                        <>
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                <button onClick={() => setShowBuildMenu(true)} disabled={isRolling} className="bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-2 rounded-xl shadow-lg text-sm">
+                                                                    BATIR 🏠
+                                                                </button>
+                                                                <button onClick={() => setShowManageMenu(true)} disabled={isRolling} className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 rounded-xl shadow-lg text-sm">
+                                                                    GÉRER 💰
+                                                                </button>
+                                                                <button onClick={() => setShowBuyoutMenu(true)} disabled={isRolling} className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded-xl shadow-lg text-sm">
+                                                                    RACHATS 💸
+                                                                </button>
+                                                                <button onClick={() => setShowTradeMenu(true)} disabled={isRolling} className="bg-teal-600 hover:bg-teal-500 text-white font-bold py-2 rounded-xl shadow-lg text-sm">
+                                                                    ÉCHANGER 🤝
+                                                                </button>
+                                                            </div>
+                                                            <button onClick={() => setShowSwissMenu(true)} disabled={isRolling || sumUpUsed} className={`w-full text-white font-bold py-2 rounded-xl shadow-lg text-sm flex items-center justify-center gap-1 ${sumUpUsed ? 'bg-gray-500 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'}`}>
+                                                                SUMUP 💳
+                                                            </button>
+                                                        </>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
