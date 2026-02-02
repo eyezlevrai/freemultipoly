@@ -23,6 +23,10 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+    <!-- Favicon standard -->
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png">
+    <link rel="shortcut icon" href="icon.png" type="image/x-icon">
+
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1a202c; color: white; }
         
@@ -105,6 +109,7 @@
 
         /* --- UI MODALS --- */
         .modal-overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(4px); z-index: 100; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.3s; }
+        .modal-overlay.transparent { background: rgba(0, 0, 0, 0.2); backdrop-filter: none; }
         
         .game-modal {
             background: white; color: #1a202c; width: 95%; max-width: 500px; max-height: 90vh;
@@ -230,6 +235,65 @@
     <div id="root"></div>
 
     <script type="text/babel">
+        // --- SOUND MANAGER ---
+        const SoundManager = {
+            ctx: null,
+            init: function() {
+                if (!this.ctx && typeof window !== 'undefined') {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            },
+            resume: function() {
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            },
+            playTone: function(freq, type, duration, vol=0.1, slideTo=null) {
+                if (!this.ctx) this.init();
+                if (!this.ctx) return;
+                
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                if (slideTo) {
+                    osc.frequency.exponentialRampToValueAtTime(slideTo, this.ctx.currentTime + duration);
+                }
+                
+                gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+                
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            },
+            playCard: function() {
+                this.resume();
+                // Swoosh: Sine slide up
+                this.playTone(400, 'sine', 0.2, 0.1, 1200);
+            },
+            playDice: function() {
+                this.resume();
+                // Rattle: random noise bursts
+                for(let i=0; i<3; i++) {
+                    setTimeout(() => this.playTone(200 + Math.random()*200, 'square', 0.05, 0.05), i*80);
+                }
+            },
+            playCash: function() {
+                this.resume();
+                // Ding!
+                this.playTone(1200, 'sine', 0.15, 0.1);
+                setTimeout(() => this.playTone(1800, 'sine', 0.4, 0.1), 100);
+            },
+            playStamp: function() {
+                this.resume();
+                // Heavy thud
+                this.playTone(100, 'sawtooth', 0.3, 0.2, 50);
+            }
+        };
+
         // --- HELPER HORODATAGE ---
         const getTimestamp = () => {
             const now = new Date();
@@ -281,21 +345,23 @@
         ];
 
         // --- HELPERS ---
+        // NEW: Prices tripled for houses
         const getHouseCost = (group) => {
-            if(['brown', 'lightblue'].includes(group)) return 50;
-            if(['pink', 'orange'].includes(group)) return 100;
-            if(['red', 'yellow'].includes(group)) return 150;
-            return 200;
+            if(['brown', 'lightblue'].includes(group)) return 150;
+            if(['pink', 'orange'].includes(group)) return 300;
+            if(['red', 'yellow'].includes(group)) return 450;
+            return 600; // green, blue
         };
 
+        // NEW: Lowered rent multipliers
         const calculateRent = (space, houseCount) => {
             let base = Math.floor(space.price * 0.1); 
             if (houseCount === 0) return base;
-            if (houseCount === 1) return base * 5;
-            if (houseCount === 2) return base * 15;
-            if (houseCount === 3) return base * 40;
-            if (houseCount === 4) return base * 70;
-            if (houseCount === 5) return base * 100; 
+            if (houseCount === 1) return base * 3;  // Was 5
+            if (houseCount === 2) return base * 10; // Was 15
+            if (houseCount === 3) return base * 25; // Was 40
+            if (houseCount === 4) return base * 45; // Was 70
+            if (houseCount === 5) return base * 70; // Was 100 (Hotel)
             return base;
         };
 
@@ -426,7 +492,8 @@
                     currentEvent: null, 
                     round: 1,
                     trade: null,
-                    turnFlags: { sumUpUsed: false }
+                    turnFlags: { sumUpUsed: false },
+                    chat: [] // Init Chat
                 };
                 await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('games').doc(newGameId).set(initialState);
                 setGameId(newGameId);
@@ -518,9 +585,20 @@
             const [color, setColor] = useState(null);
             const COLORS = ["#EF4444", "#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4", "#6366f1"];
 
+            // URL de l'image de fond (Vous pouvez remplacer ce lien par le vôtre)
+            const backgroundUrl = "https://cdn.pixabay.com/photo/2023/10/16/10/37/cathedral-8318952_1280.jpg"; 
+
             return (
-                <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
-                    <div className="bg-gray-800 p-8 rounded-xl shadow-2xl max-w-md w-full border border-gray-700">
+                <div 
+                    className="min-h-screen flex items-center justify-center text-white bg-gray-900"
+                    style={{
+                        backgroundImage: `linear-gradient(rgba(17, 24, 39, 0.85), rgba(17, 24, 39, 0.85)), url("${backgroundUrl}")`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat'
+                    }}
+                >
+                    <div className="bg-gray-800 p-8 rounded-xl shadow-2xl max-w-md w-full border border-gray-700 backdrop-blur-sm bg-opacity-90">
                         <div className="text-center mb-8">
                             <h1 className="text-5xl font-black text-green-400 logo-text mb-2">MULTIPOLY</h1>
                             <span className="bg-blue-600 text-xs px-2 py-1 rounded uppercase tracking-widest font-bold">Édition Trading</span>
@@ -581,6 +659,10 @@
             const [showBuyoutMenu, setShowBuyoutMenu] = useState(false); 
             const [swissAmount, setSwissAmount] = useState(""); 
             const prevPlayersRef = useRef(gameState.players);
+            
+            // CHAT & TAB STATE
+            const [activeTab, setActiveTab] = useState('log');
+            const [chatInput, setChatInput] = useState("");
 
             // Trade State
             const [tradeTarget, setTradeTarget] = useState("");
@@ -601,10 +683,10 @@
                 if (amount <= 350) return 0.55;
                 if (amount <= 400) return 0.65;
                 if (amount <= 450) return 0.70;
-                if (amount <= 500) return 0.75; 
+                if (amount <= 500) return 0.80; // Gap fill
                 if (amount <= 550) return 0.80;
                 if (amount <= 600) return 0.85;
-                return 0.90;
+                return 0.90; // > 600
             };
 
             const getRiskColor = (prob) => {
@@ -613,6 +695,12 @@
                 if (prob <= 0.40) return "text-orange-500";
                 return "text-red-600";
             };
+
+            useEffect(() => {
+                if (gameState.currentEvent?.type === 'CARD') SoundManager.playCard();
+                if (gameState.currentEvent?.type === 'JAIL_ANIM') SoundManager.playStamp();
+                if (gameState.currentEvent?.type === 'FINE_ANIM') SoundManager.playStamp();
+            }, [gameState.currentEvent]);
 
             useEffect(() => {
                 gameState.players.forEach((p, idx) => {
@@ -624,6 +712,8 @@
                         const floatId = Date.now() + Math.random();
                         setMoneyFloats(prev => [...prev, { id: floatId, text, color, playerId: p.id }]);
                         setTimeout(() => setMoneyFloats(prev => prev.filter(f => f.id !== floatId)), 2000);
+                        
+                        if (p.id === user.uid && diff > 0) SoundManager.playCash();
                     }
                 });
                 prevPlayersRef.current = gameState.players;
@@ -632,6 +722,21 @@
             const updateState = async (updates) => {
                 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
                 await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('games').doc(gameId).update(updates);
+            };
+
+            // --- CHAT LOGIC ---
+            const sendMessage = async (e) => {
+                e.preventDefault();
+                if (!chatInput.trim()) return;
+                const msg = {
+                    sender: me.name,
+                    text: chatInput.trim(),
+                    timestamp: getTimestamp()
+                };
+                await updateState({
+                    chat: firebase.firestore.FieldValue.arrayUnion(msg)
+                });
+                setChatInput("");
             };
 
             // --- BUYOUT LOGIC ---
@@ -679,6 +784,7 @@
                 };
 
                 await updateState(updates);
+                SoundManager.playCash();
                 setShowBuyoutMenu(false);
             };
 
@@ -745,6 +851,7 @@
                     log: firebase.firestore.FieldValue.arrayUnion(tradeLog)
                 };
                 await updateState(updates);
+                SoundManager.playCash();
             };
 
             const rejectTrade = async () => {
@@ -766,7 +873,7 @@
                 setShowSwissMenu(false);
                 setSwissAmount("");
 
-                const isCaught = Math.random() < getRiskProbability(amount); 
+                const isCaught = Math.random() < getRiskProbability(amount); // Use dynamic probability here too
                 
                 let eventUpdate = {};
                 if (isCaught) {
@@ -796,6 +903,7 @@
                         log: firebase.firestore.FieldValue.arrayUnion(`${getTimestamp()} ${me.name} place ${amount}€ sur son Compte SumUp 💳`),
                         turnFlags: { sumUpUsed: true }
                     };
+                    SoundManager.playCash();
                     await updateState(updates);
                 }
             };
@@ -803,6 +911,7 @@
             const rollDice = async () => {
                 if (!isMyTurn || isRolling || me.money < 0) return;
                 setIsRolling(true);
+                SoundManager.playDice();
                 try {
                     const d1 = Math.floor(Math.random() * 6) + 1;
                     const d2 = Math.floor(Math.random() * 6) + 1;
@@ -911,7 +1020,7 @@
                         if (nextIdx === 0) {
                             const nextRound = (gameState.round || 1) + 1;
                             finalUpdates['round'] = nextRound;
-                            if (nextRound > 100) finalUpdates['status'] = 'FINISHED';
+                            if (nextRound > 60) finalUpdates['status'] = 'FINISHED'; // 60 TOURS
                         }
                     }
                     await updateState(finalUpdates);
@@ -927,6 +1036,7 @@
                     log: firebase.firestore.FieldValue.arrayUnion(`${getTimestamp()} ${me.name} achète ${space.name}`)
                 };
                 await updateState(updates);
+                SoundManager.playCash();
             };
 
             const buildHouse = async (spaceId) => {
@@ -949,6 +1059,7 @@
                     log: firebase.firestore.FieldValue.arrayUnion(`${getTimestamp()} ${me.name} construit ${currentHouses === 4 ? "un Hôtel" : "une maison"} sur ${space.name} (-${actualCost}€)`)
                 };
                 await updateState(updates);
+                SoundManager.playCash();
             };
 
             const sellHouse = async (spaceId) => {
@@ -970,6 +1081,7 @@
                 if (currentHouses === 1) updates[`houses.${spaceId}`] = firebase.firestore.FieldValue.delete();
                 else updates[`houses.${spaceId}`] = currentHouses - 1;
                 await updateState(updates);
+                SoundManager.playCash();
             };
 
             const toggleMortgage = async (spaceId) => {
@@ -984,6 +1096,7 @@
                         log: firebase.firestore.FieldValue.arrayUnion(`${getTimestamp()} ${me.name} hypothèque ${space.name} (+${mortgageValue}€)`)
                     };
                     await updateState(updates);
+                    SoundManager.playCash();
                 } else {
                     if (me.money < liftCost) return;
                     const updates = {
@@ -992,6 +1105,7 @@
                         log: firebase.firestore.FieldValue.arrayUnion(`${getTimestamp()} ${me.name} lève l'hypothèque de ${space.name} (-${liftCost}€)`)
                     };
                     await updateState(updates);
+                    SoundManager.playCash();
                 }
             };
             
@@ -1023,7 +1137,12 @@
             };
 
             const myProperties = me.properties.map(id => SPACES[id]).sort((a,b) => a.id - b.id);
-            const buildableProperties = myProperties.filter(s => s.group && hasMonopoly(s.group));
+            // NEW: Filter buildable props: must be monopoly AND current location
+            const buildableProperties = myProperties.filter(s => 
+                s.group && 
+                hasMonopoly(s.group) && 
+                s.id === me.position // The new constraint
+            );
 
             const getSpaceStyle = (index) => {
                 let gridColumn, gridRow, barClass = "", contentStyle = {}, housesClass="";
@@ -1127,7 +1246,7 @@
 
                     {/* EVENT */}
                     {gameState.currentEvent && (
-                        <div className="modal-overlay">
+                        <div className="modal-overlay transparent">
                             {gameState.currentEvent.type === 'JAIL_ANIM' && <div className="jail-stamp">{gameState.currentEvent.text}</div>}
                             {gameState.currentEvent.type === 'CARD' && (
                                 <div className="card-balatro">
@@ -1153,8 +1272,8 @@
 
                     {/* NOTIFICATION ECHANGE (POUR LA CIBLE) */}
                     {gameState.trade && gameState.trade.target === user.uid && (
-                        <div className="modal-overlay">
-                            <div className="game-modal" style={{maxWidth: '600px'}}>
+                        <div className="modal-overlay transparent">
+                            <div className="game-modal" style={{maxWidth: '600px', boxShadow: '0 0 50px rgba(0,0,0,0.5)'}}>
                                 <div className="modal-header bg-blue-600 text-white">PROPOSITION D'ÉCHANGE 🤝</div>
                                 <div className="modal-body p-4 bg-white text-gray-800">
                                     <p className="text-center mb-4"><strong>{gameState.trade.initiatorName}</strong> vous propose :</p>
@@ -1189,8 +1308,8 @@
 
                     {/* ATTENTE ECHANGE (INITIATEUR) */}
                     {gameState.trade && gameState.trade.initiator === user.uid && (
-                        <div className="modal-overlay">
-                            <div className="bg-white p-6 rounded shadow-xl text-black text-center">
+                        <div className="modal-overlay transparent">
+                            <div className="bg-white p-6 rounded shadow-xl text-black text-center border-2 border-gray-200">
                                 <h2 className="font-bold text-xl mb-2">Échange en cours...</h2>
                                 <p className="mb-4">En attente de la réponse...</p>
                                 <button onClick={rejectTrade} className="text-red-500 underline text-sm">Annuler</button>
@@ -1200,8 +1319,8 @@
 
                     {/* MENU ECHANGE (CREATEUR) */}
                     {showTradeMenu && (
-                        <div className="modal-overlay" onClick={() => setShowTradeMenu(false)}>
-                            <div className="game-modal" onClick={e => e.stopPropagation()} style={{maxWidth: '600px'}}>
+                        <div className="modal-overlay transparent" onClick={() => setShowTradeMenu(false)}>
+                            <div className="game-modal" onClick={e => e.stopPropagation()} style={{maxWidth: '600px', boxShadow: '0 0 50px rgba(0,0,0,0.5)'}}>
                                 <div className="modal-header">
                                     <span>PROPOSER ÉCHANGE</span>
                                     <button onClick={() => setShowTradeMenu(false)}><i className="fas fa-times"></i></button>
@@ -1264,7 +1383,7 @@
 
                     {/* MENU BUYOUT (RACHATS) */}
                     {showBuyoutMenu && (
-                        <div className="modal-overlay" onClick={() => setShowBuyoutMenu(false)}>
+                        <div className="modal-overlay transparent" onClick={() => setShowBuyoutMenu(false)}>
                             <div className="game-modal" onClick={e => e.stopPropagation()}>
                                 <div className="modal-header">
                                     <span>RACHETER HYPOTHÈQUES</span>
@@ -1321,7 +1440,7 @@
 
                     {/* MODAL SUISSE */}
                     {showSwissMenu && (
-                        <div className="modal-overlay" onClick={() => setShowSwissMenu(false)}>
+                        <div className="modal-overlay transparent" onClick={() => setShowSwissMenu(false)}>
                             <div className="swiss-modal" onClick={e => e.stopPropagation()}>
                                 <div className="text-xl font-bold mb-2">COMPTE SUMUP 💳</div>
                                 <p className="text-sm mb-4 opacity-90">Attention ! David Lafolie surveille les transactions SumUp.</p>
@@ -1350,11 +1469,11 @@
 
                     {/* MENU CONSTRUCTION */}
                     {showBuildMenu && (
-                        <div className="modal-overlay" onClick={() => setShowBuildMenu(false)}>
+                        <div className="modal-overlay transparent" onClick={() => setShowBuildMenu(false)}>
                             <div className="game-modal" onClick={e => e.stopPropagation()}>
                                 <div className="modal-header"><span>CONSTRUIRE</span><button onClick={() => setShowBuildMenu(false)}><i className="fas fa-times"></i></button></div>
                                 <div className="modal-body">
-                                    {buildableProperties.length === 0 ? <p className="text-gray-500 text-center p-4">Monopole requis.</p> : buildableProperties.map(s => {
+                                    {buildableProperties.length === 0 ? <p className="text-gray-500 text-center p-4">Placez-vous sur une propriété dont vous avez le monopole pour construire.</p> : buildableProperties.map(s => {
                                         const h = (gameState.houses && gameState.houses[s.id]) || 0;
                                         const baseCost = getHouseCost(s.group);
                                         // PRIX HOTEL = 2.5x MAISON
@@ -1376,7 +1495,7 @@
 
                     {/* MENU GESTION (HYPOTHÈQUES) */}
                     {showManageMenu && (
-                        <div className="modal-overlay" onClick={() => setShowManageMenu(false)}>
+                        <div className="modal-overlay transparent" onClick={() => setShowManageMenu(false)}>
                             <div className="game-modal" onClick={e => e.stopPropagation()}>
                                 <div className="modal-header"><span>GÉRER PROPRIÉTÉS</span><button onClick={() => setShowManageMenu(false)}><i className="fas fa-times"></i></button></div>
                                 <div className="modal-body">
@@ -1423,7 +1542,7 @@
                             <h2 className="text-xl font-black text-white tracking-tighter">MULTIPOLY <span className="text-green-500">TC</span></h2>
                             <div className="flex justify-between items-end mt-1">
                                 <span className="text-xs text-gray-400 font-mono">CODE: {gameId}</span>
-                                <span className="text-xs font-bold text-yellow-500 border border-yellow-500 px-2 rounded">TOUR {gameState.round || 1}/100</span>
+                                <span className="text-xs font-bold text-yellow-500 border border-yellow-500 px-2 rounded">TOUR {gameState.round || 1}/60</span>
                             </div>
                         </div>
                         <div className="flex-grow overflow-y-auto p-4 space-y-3">
@@ -1447,8 +1566,58 @@
                                 </div>
                             ))}
                         </div>
-                        <div className="h-40 bg-gray-900 p-2 text-xs font-mono text-gray-400 overflow-y-auto flex flex-col-reverse border-t border-gray-700">
-                            {gameState.log.slice().reverse().map((l, i) => <div key={i} className="mb-1 border-b border-gray-800 pb-1">> {l}</div>)}
+
+                        {/* BOTTOM SIDEBAR (LOGS & CHAT) */}
+                        <div className="flex flex-col border-t border-gray-700 bg-gray-900 h-64">
+                            <div className="flex border-b border-gray-700">
+                                <button 
+                                    className={`flex-1 py-2 text-xs font-bold ${activeTab === 'log' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-800'}`}
+                                    onClick={() => setActiveTab('log')}
+                                >
+                                    JOURNAL
+                                </button>
+                                <button 
+                                    className={`flex-1 py-2 text-xs font-bold ${activeTab === 'chat' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-800'}`}
+                                    onClick={() => setActiveTab('chat')}
+                                >
+                                    TCHAT {gameState.chat && gameState.chat.length > 0 && `(${gameState.chat.length})`}
+                                </button>
+                            </div>
+
+                            <div className="flex-grow overflow-y-auto p-2 text-xs font-mono text-gray-300 flex flex-col-reverse">
+                                {activeTab === 'log' ? (
+                                    gameState.log.slice().reverse().map((l, i) => (
+                                        <div key={i} className="mb-1 border-b border-gray-800 pb-1 text-gray-400">
+                                            <span className="text-green-600 mr-1">></span>{l}
+                                        </div>
+                                    ))
+                                ) : (
+                                    (gameState.chat || []).slice().reverse().map((msg, i) => (
+                                        <div key={i} className="mb-2">
+                                            <div className="flex justify-between text-[10px] text-gray-500">
+                                                <span className="font-bold text-blue-400">{msg.sender}</span>
+                                                <span>{msg.timestamp.slice(1,9)}</span>
+                                            </div>
+                                            <div className="text-white break-words">{msg.text}</div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            {activeTab === 'chat' && (
+                                <form onSubmit={sendMessage} className="p-2 border-t border-gray-700 flex gap-2">
+                                    <input 
+                                        type="text" 
+                                        className="flex-grow bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-blue-500"
+                                        placeholder="Message..."
+                                        value={chatInput}
+                                        onChange={e => setChatInput(e.target.value)}
+                                    />
+                                    <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white rounded px-3 py-1 text-xs">
+                                        <i className="fas fa-paper-plane"></i>
+                                    </button>
+                                </form>
+                            )}
                         </div>
                     </div>
 
