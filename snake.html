@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TC SNAKE - Battle Royale</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #121212; color: #e2e8f0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; }
+        canvas { background-color: #0f172a; box-shadow: 0 0 20px rgba(0,0,0,0.5); border-radius: 8px; }
+        .hidden { display: none !important; }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1a202c; }
+        ::-webkit-scrollbar-thumb { background: #4a5568; border-radius: 4px; }
+        .snake-grid {
+            image-rendering: pixelated; 
+        }
+        /* Animation pour le panneau */
+        .rules-transition {
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col items-center justify-center">
+
+    <!-- UI: MAIN MENU CONTAINER -->
+    <!-- Ce conteneur regroupe le bouton règles et la carte de login -->
+    <div id="menu-screen" class="flex items-stretch gap-4 h-auto">
+        
+        <!-- SIDE BUTTON / RULES PANEL -->
+        <div id="rules-panel" onclick="toggleRules()" class="rules-transition w-16 bg-gray-900 hover:bg-gray-800 border border-gray-700 rounded-xl shadow-2xl cursor-pointer overflow-hidden flex flex-col justify-center items-center relative group">
+            
+            <!-- Vertical Text (Visible when closed) -->
+            <div id="rules-label" class="absolute inset-0 flex items-center justify-center transition-opacity duration-300">
+                <span class="transform -rotate-90 text-yellow-400 font-bold tracking-[0.2em] whitespace-nowrap text-lg group-hover:text-yellow-300">
+                    INFO & RÈGLES
+                </span>
+            </div>
+
+            <!-- Content (Visible when open) -->
+            <div id="rules-content" class="hidden opacity-0 w-80 p-6 flex-col gap-4 text-left transition-opacity duration-500 delay-100 h-full overflow-y-auto">
+                <h3 class="text-2xl font-bold text-green-400 border-b border-gray-700 pb-2 mb-2">Comment Jouer</h3>
+                
+                <div class="space-y-4 text-sm text-gray-300">
+                    <div>
+                        <strong class="text-white block mb-1">🏆 Objectif</strong>
+                        Être le dernier serpent en vie. Le match se joue en <span class="text-yellow-400">Best of 3</span> (premier à 2 victoires).
+                    </div>
+
+                    <div>
+                        <strong class="text-white block mb-1">⚔️ Combat PvP</strong>
+                        - Foncez dans le corps d'un ennemi pour le tuer.
+                        - Si deux têtes se heurtent, c'est un <span class="text-red-400">double K.O</span>.
+                    </div>
+
+                    <div>
+                        <strong class="text-white block mb-1">🎮 Contrôles</strong>
+                        Utilisez les flèches directionnelles ou les boutons tactiles.
+                    </div>
+                </div>
+
+                <div class="mt-auto pt-4 text-center text-xs text-gray-500 italic">
+                    Cliquez pour refermer
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN LOGIN CARD -->
+        <div id="login-card" class="flex flex-col items-center gap-6 p-8 bg-gray-800 rounded-xl shadow-2xl max-w-md w-full border border-gray-700 transition-all">
+            <h1 class="text-5xl font-bold text-green-400 tracking-tighter">TC <span class="text-white">SNAKE</span></h1>
+            <p class="text-gray-400 text-center">Le dernier survivant gagne. Best of 3.</p>
+            
+            <div class="w-full flex flex-col gap-3">
+                <input type="text" id="username-input" placeholder="Votre Pseudo" class="w-full p-3 bg-gray-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-green-500 font-bold text-center" maxlength="10">
+                
+                <button onclick="createLobby()" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded transition shadow-lg">
+                    CRÉER UNE PARTIE
+                </button>
+                
+                <div class="flex gap-2">
+                    <input type="text" id="lobby-code-input" placeholder="Code (6 chiffres)" class="flex-1 p-3 bg-gray-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-center tracking-widest uppercase">
+                    <button onclick="joinLobby()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded transition shadow-lg">
+                        REJOINDRE
+                    </button>
+                </div>
+            </div>
+            <div id="auth-status" class="text-xs text-gray-500">Connexion aux serveurs...</div>
+        </div>
+    </div>
+
+    <!-- UI: LOBBY -->
+    <div id="lobby-screen" class="hidden flex flex-col items-center gap-6 p-8 bg-gray-800 rounded-xl shadow-2xl max-w-md w-full border border-gray-700">
+        <div class="text-center">
+            <h2 class="text-2xl font-bold text-white">Code du Salon</h2>
+            <div id="display-code" class="text-5xl font-mono font-bold text-yellow-400 my-4 tracking-widest p-4 bg-gray-900 rounded select-all">Loading...</div>
+            <p class="text-sm text-gray-400">Partagez ce code avec vos amis</p>
+        </div>
+
+        <div class="w-full bg-gray-900 p-4 rounded h-40 overflow-y-auto">
+            <h3 class="text-xs font-bold text-gray-500 uppercase mb-2">Joueurs connectés</h3>
+            <ul id="player-list" class="space-y-2">
+                <!-- Players inserted here -->
+            </ul>
+        </div>
+
+        <button id="start-btn" onclick="startGameRequest()" class="hidden w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded transition animate-pulse">
+            LANCER LE MATCH
+        </button>
+        <p id="wait-msg" class="text-yellow-500 text-sm animate-pulse">En attente de l'hôte...</p>
+    </div>
+
+    <!-- UI: GAME -->
+    <div id="game-screen" class="hidden relative w-full h-full flex flex-col items-center justify-center bg-gray-900">
+        
+        <!-- Scoreboard Header -->
+        <div class="absolute top-4 left-0 right-0 flex justify-center gap-8 pointer-events-none">
+            <div id="game-info" class="bg-gray-800/80 px-6 py-2 rounded-full border border-gray-600 text-white font-mono flex gap-4">
+                <span>Manche: <span id="round-display" class="text-yellow-400">1</span>/3</span>
+            </div>
+        </div>
+
+        <!-- Scores Left/Right -->
+        <div id="scoreboard-container" class="absolute top-20 left-4 right-4 flex justify-between pointer-events-none text-sm">
+            <!-- Dynamic scores injected via JS -->
+        </div>
+
+        <canvas id="game-canvas" width="600" height="600" class="max-w-[95vw] max-h-[80vh] object-contain border-2 border-gray-700"></canvas>
+        
+        <!-- Mobile Controls -->
+        <div class="md:hidden absolute bottom-8 flex gap-4">
+            <button onclick="handleMobileInput('ArrowLeft')" class="w-16 h-16 bg-gray-700/50 rounded-full text-2xl">⬅️</button>
+            <div class="flex flex-col gap-4">
+                <button onclick="handleMobileInput('ArrowUp')" class="w-16 h-16 bg-gray-700/50 rounded-full text-2xl">⬆️</button>
+                <button onclick="handleMobileInput('ArrowDown')" class="w-16 h-16 bg-gray-700/50 rounded-full text-2xl">⬇️</button>
+            </div>
+            <button onclick="handleMobileInput('ArrowRight')" class="w-16 h-16 bg-gray-700/50 rounded-full text-2xl">➡️</button>
+        </div>
+
+        <!-- Notification Overlay -->
+        <div id="overlay-msg" class="hidden absolute inset-0 bg-black/70 flex items-center justify-center z-50">
+            <div class="bg-gray-800 p-8 rounded-xl border border-gray-600 text-center">
+                <h2 id="overlay-title" class="text-4xl font-bold text-white mb-2">Manche Terminée</h2>
+                <p id="overlay-subtitle" class="text-gray-300 text-lg mb-6">Le vainqueur est...</p>
+                <div id="overlay-countdown" class="text-2xl font-mono text-yellow-400">Prochaine manche dans 3s...</div>
+                <button id="return-lobby-btn" onclick="location.reload()" class="hidden mt-4 px-6 py-2 bg-red-600 hover:bg-red-500 rounded text-white">Quitter</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, arrayUnion, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- CONFIGURATION ---
+        // Utilisation de la configuration dynamique de l'environnement pour éviter le mismatch de token
+        const firebaseConfig = JSON.parse(__firebase_config);
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Global State
+        const STATE = {
+            user: null,
+            lobbyId: null,
+            isHost: false,
+            unsubscribe: null, // Listener unsubscription
+            gameLoopId: null,
+            players: {}, // Local mirror of player data
+            food: {x: 10, y: 10},
+            gridSize: 20, // 20x20 grid
+            tileCount: 30, // 30 tiles wide/high
+            gameStatus: 'waiting', // waiting, playing, round_over, match_over
+            myDirection: {x: 0, y: 0},
+            lastProcessedInput: null
+        };
+
+        const GRID_SIZE = 20; // Pixel size of one cell
+        const TILE_COUNT = 30; // Number of cells (600px / 20)
+
+        // Utility: Get App ID
+        const getAppId = () => typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        // --- AUTHENTICATION ---
+        async function initAuth() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Auth error:", error);
+                document.getElementById('auth-status').innerText = "Erreur connexion: " + error.code;
+                document.getElementById('auth-status').className = "text-xs text-red-500";
+            }
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                STATE.user = user;
+                document.getElementById('auth-status').innerText = "Connecté: " + user.uid.slice(0, 5);
+                document.getElementById('auth-status').className = "text-xs text-green-500";
+            }
+        });
+
+        initAuth();
+
+        // --- DOM ELEMENTS ---
+        const screens = {
+            menu: document.getElementById('menu-screen'),
+            lobby: document.getElementById('lobby-screen'),
+            game: document.getElementById('game-screen')
+        };
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+
+        // --- INTERFACE LOGIC ---
+
+        let isRulesOpen = false;
+        window.toggleRules = () => {
+            const panel = document.getElementById('rules-panel');
+            const label = document.getElementById('rules-label');
+            const content = document.getElementById('rules-content');
+            
+            isRulesOpen = !isRulesOpen;
+
+            if (isRulesOpen) {
+                // Open animation
+                panel.classList.replace('w-16', 'w-80');
+                label.classList.add('opacity-0');
+                
+                // Show content with slight delay for smoothness
+                content.classList.remove('hidden');
+                setTimeout(() => {
+                    content.classList.remove('opacity-0');
+                }, 100);
+            } else {
+                // Close animation
+                content.classList.add('opacity-0');
+                setTimeout(() => {
+                    content.classList.add('hidden');
+                    label.classList.remove('opacity-0');
+                    panel.classList.replace('w-80', 'w-16');
+                }, 100);
+            }
+        };
+
+        // --- LOBBY LOGIC ---
+
+        window.createLobby = async () => {
+            if (!STATE.user) return showToast("Attendez la connexion...", "error");
+            const username = document.getElementById('username-input').value.trim() || `Joueur ${Math.floor(Math.random()*1000)}`;
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+            const appId = getAppId();
+
+            try {
+                // FIXED: Added 'lobbies' collection to make path even (6 segments)
+                const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', code);
+                
+                // Initial Game State
+                const initialData = {
+                    hostId: STATE.user.uid,
+                    status: 'waiting',
+                    round: 1,
+                    createdAt: Date.now(),
+                    players: {
+                        [STATE.user.uid]: createPlayerObject(STATE.user.uid, username, true)
+                    },
+                    food: getRandomPosition(),
+                    winner: null
+                };
+
+                await setDoc(lobbyRef, initialData);
+                enterLobby(code, true);
+            } catch (e) {
+                console.error(e);
+                showToast("Erreur création: " + e.message, "error");
+            }
+        };
+
+        window.joinLobby = async () => {
+            if (!STATE.user) return;
+            const username = document.getElementById('username-input').value.trim() || `Joueur ${Math.floor(Math.random()*1000)}`;
+            const code = document.getElementById('lobby-code-input').value.trim();
+            const appId = getAppId();
+
+            if (code.length !== 6) return showToast("Code invalide", "error");
+
+            try {
+                // FIXED: Added 'lobbies' collection to make path even (6 segments)
+                const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', code);
+                const snap = await getDoc(lobbyRef);
+
+                if (!snap.exists()) return showToast("Ce salon n'existe pas", "error");
+                const data = snap.data();
+
+                if (data.status !== 'waiting') return showToast("Partie déjà commencée", "error");
+
+                // Add self to players map
+                const playerUpdate = {};
+                playerUpdate[`players.${STATE.user.uid}`] = createPlayerObject(STATE.user.uid, username, false);
+
+                await updateDoc(lobbyRef, playerUpdate);
+                enterLobby(code, false);
+            } catch (e) {
+                console.error(e);
+                showToast("Erreur lors de la jointure", "error");
+            }
+        };
+
+        function createPlayerObject(uid, name, isHost) {
+            // Colors based on host or not
+            const color = isHost ? '#4ade80' : '#60a5fa'; // Green vs Blue
+            // Random start pos
+            const startX = Math.floor(Math.random() * (TILE_COUNT - 4)) + 2;
+            const startY = Math.floor(Math.random() * (TILE_COUNT - 4)) + 2;
+
+            return {
+                uid: uid,
+                name: name,
+                color: getPlayerColor(uid),
+                wins: 0,
+                alive: true,
+                direction: {x: 0, y: 0}, // Pending direction
+                currentDirection: {x: 0, y: 0}, // Actual movement direction
+                body: [{x: startX, y: startY}, {x: startX, y: startY + 1}, {x: startX, y: startY + 2}],
+                score: 0
+            };
+        }
+
+        // --- GAME STATE SYNC ---
+
+        function enterLobby(code, isHost) {
+            STATE.lobbyId = code;
+            STATE.isHost = isHost;
+
+            switchScreen('lobby');
+            document.getElementById('display-code').innerText = code;
+            
+            if (isHost) {
+                document.getElementById('start-btn').classList.remove('hidden');
+                document.getElementById('wait-msg').classList.add('hidden');
+            } else {
+                document.getElementById('start-btn').classList.add('hidden');
+                document.getElementById('wait-msg').classList.remove('hidden');
+            }
+
+            // Listener
+            const appId = getAppId();
+            // FIXED: Added 'lobbies' collection to make path even (6 segments)
+            const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', code);
+
+            STATE.unsubscribe = onSnapshot(lobbyRef, (snap) => {
+                if (!snap.exists()) {
+                    alert("Le salon a été fermé.");
+                    location.reload();
+                    return;
+                }
+                const data = snap.data();
+                handleSnapshot(data);
+            }, (error) => {
+                console.error("Sync error:", error);
+            });
+        }
+
+        function handleSnapshot(data) {
+            STATE.players = data.players;
+            STATE.gameStatus = data.status;
+            STATE.food = data.food;
+            STATE.round = data.round;
+
+            // Lobby UI Updates
+            const playerList = document.getElementById('player-list');
+            playerList.innerHTML = '';
+            Object.values(data.players).forEach(p => {
+                const li = document.createElement('li');
+                li.className = "flex justify-between items-center bg-gray-800 p-2 rounded border-l-4";
+                li.style.borderLeftColor = p.color;
+                li.innerHTML = `<span class="text-white font-bold">${p.name}</span> <span class="text-gray-400 text-xs">${p.wins} victoires</span>`;
+                playerList.appendChild(li);
+            });
+
+            // Transition to Game
+            if (data.status === 'playing' && screens.game.classList.contains('hidden')) {
+                startGameUI();
+            }
+
+            // Sync Game Board for clients (Host does this locally then pushes, clients just render)
+            if (data.status === 'playing' || data.status === 'round_over') {
+                renderGame();
+                updateScoreboard();
+            }
+
+            // Host Logic Loop Trigger
+            if (STATE.isHost && data.status === 'playing' && !STATE.gameLoopId) {
+                startGameLoop();
+            }
+
+            // Handle Round Over / Match Over overlays
+            if (data.status === 'round_over') {
+                showOverlay("Manche terminée", `Gagnant: ${data.roundWinnerName || 'Personne'}`, "Prochaine manche...");
+            } else if (data.status === 'match_over') {
+                showOverlay("VICTOIRE !", `Le grand champion est ${data.matchWinnerName}`, "Partie terminée", true);
+            } else {
+                hideOverlay();
+            }
+        }
+
+        // --- GAME LOGIC (HOST ONLY) ---
+
+        window.startGameRequest = async () => {
+            const appId = getAppId();
+            // FIXED: Added 'lobbies' collection
+            const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', STATE.lobbyId);
+            
+            // Check player count
+            if (Object.keys(STATE.players).length < 2) {
+                showToast("Il faut au moins 2 joueurs !", "error");
+                return;
+            }
+
+            await updateDoc(lobbyRef, {
+                status: 'playing',
+                round: 1,
+                // Reset positions for start
+                players: resetPositions(STATE.players)
+            });
+        };
+
+        function resetPositions(players) {
+            const newPlayers = {...players};
+            Object.keys(newPlayers).forEach(key => {
+                const p = newPlayers[key];
+                const startX = Math.floor(Math.random() * (TILE_COUNT - 6)) + 3;
+                const startY = Math.floor(Math.random() * (TILE_COUNT - 6)) + 3;
+                p.body = [{x: startX, y: startY}, {x: startX, y: startY+1}, {x: startX, y: startY+2}];
+                p.alive = true;
+                p.direction = {x: 0, y: -1}; // Start moving up
+                p.currentDirection = {x: 0, y: -1};
+            });
+            return newPlayers;
+        }
+
+        function startGameLoop() {
+            if (STATE.gameLoopId) clearInterval(STATE.gameLoopId);
+            // Game Tick Speed (150ms is standard for Snake)
+            STATE.gameLoopId = setInterval(hostGameTick, 150);
+        }
+
+        async function hostGameTick() {
+            if (!STATE.isHost || STATE.gameStatus !== 'playing') return;
+
+            const players = STATE.players;
+            let food = STATE.food;
+            let updates = {};
+            let playersAlive = 0;
+            let lastAliveId = null;
+
+            // 1. Move Snakes
+            Object.keys(players).forEach(uid => {
+                const p = players[uid];
+                if (!p.alive) return;
+
+                playersAlive++;
+                lastAliveId = uid;
+
+                // Validate direction (prevent 180 turn)
+                if ((p.direction.x !== 0 && p.direction.x !== -p.currentDirection.x) ||
+                    (p.direction.y !== 0 && p.direction.y !== -p.currentDirection.y)) {
+                    p.currentDirection = p.direction;
+                }
+
+                // Calculate new head
+                const head = p.body[0];
+                const newHead = {
+                    x: head.x + p.currentDirection.x,
+                    y: head.y + p.currentDirection.y
+                };
+
+                // Wall Collision
+                if (newHead.x < 0 || newHead.x >= TILE_COUNT || newHead.y < 0 || newHead.y >= TILE_COUNT) {
+                    p.alive = false;
+                    return;
+                }
+
+                // Self/Other Collision
+                // Check against ALL snake bodies
+                let crashed = false;
+                Object.values(players).forEach(otherP => {
+                    if (!otherP.alive) return;
+                    otherP.body.forEach(segment => {
+                        if (segment.x === newHead.x && segment.y === newHead.y) {
+                            crashed = true;
+                        }
+                    });
+                });
+
+                if (crashed) {
+                    p.alive = false;
+                    return;
+                }
+
+                // Move Body
+                p.body.unshift(newHead); // Add head
+
+                // Food Collision
+                if (newHead.x === food.x && newHead.y === food.y) {
+                    p.score += 10;
+                    // Respawn food
+                    food = getRandomPosition();
+                    // Don't pop tail (grow)
+                } else {
+                    p.body.pop(); // Remove tail
+                }
+            });
+
+            // 2. Check Win Condition (Round)
+            // If 1 survivor remains (and we had >1 players to start)
+            // Or 0 survivors (draw)
+            const activePlayerCount = Object.keys(players).length;
+            
+            let roundOver = false;
+            let roundWinnerName = null;
+
+            if (activePlayerCount > 1 && playersAlive <= 1) {
+                roundOver = true;
+                if (playersAlive === 1) {
+                    players[lastAliveId].wins += 1;
+                    roundWinnerName = players[lastAliveId].name;
+                } else {
+                    roundWinnerName = "Personne (Match Nul)";
+                }
+            } else if (activePlayerCount === 1 && playersAlive === 0) {
+                 // Single player mode just for testing
+                 roundOver = true;
+                 roundWinnerName = "Le mur (Perdu)";
+            }
+
+            // 3. Update Firestore
+            const appId = getAppId();
+            // FIXED: Added 'lobbies' collection
+            const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', STATE.lobbyId);
+
+            if (roundOver) {
+                clearInterval(STATE.gameLoopId);
+                STATE.gameLoopId = null;
+
+                // Check Match Win (Best of 3 -> First to 2 wins)
+                let matchWinner = null;
+                Object.values(players).forEach(p => {
+                    if (p.wins >= 2) matchWinner = p.name;
+                });
+
+                if (matchWinner) {
+                    await updateDoc(lobbyRef, {
+                        players: players,
+                        status: 'match_over',
+                        matchWinnerName: matchWinner
+                    });
+                } else {
+                    await updateDoc(lobbyRef, {
+                        players: players,
+                        status: 'round_over',
+                        roundWinnerName: roundWinnerName
+                    });
+                    
+                    // Start next round after delay
+                    setTimeout(async () => {
+                         // Reset positions but keep wins
+                         const resetPlayers = resetPositions(players);
+                         await updateDoc(lobbyRef, {
+                            status: 'playing',
+                            players: resetPlayers,
+                            food: getRandomPosition(),
+                            round: STATE.round + 1
+                         });
+                         startGameLoop(); // Restart loop
+                    }, 3000);
+                }
+            } else {
+                // Just update positions
+                await updateDoc(lobbyRef, {
+                    players: players,
+                    food: food
+                });
+            }
+        }
+
+        // --- CLIENT INPUT HANDLING ---
+
+        document.addEventListener('keydown', (e) => {
+            if (STATE.gameStatus !== 'playing') return;
+            // Prevent scrolling
+            if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {
+                e.preventDefault();
+            }
+            handleInput(e.key);
+        });
+
+        window.handleMobileInput = (key) => {
+             if (STATE.gameStatus !== 'playing') return;
+             handleInput(key);
+        }
+
+        async function handleInput(key) {
+            let dx = 0, dy = 0;
+            if (key === 'ArrowUp') dy = -1;
+            else if (key === 'ArrowDown') dy = 1;
+            else if (key === 'ArrowLeft') dx = -1;
+            else if (key === 'ArrowRight') dx = 1;
+            else return;
+
+            // Optimistic Local Update (Optional, skipping for simplicity to rely on snapshot)
+            
+            // Send to Firestore
+            const appId = getAppId();
+            // FIXED: Added 'lobbies' collection
+            const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', STATE.lobbyId);
+            
+            // We only update our specific player's direction
+            // Construct the field path: "players.UID.direction"
+            const fieldPath = `players.${STATE.user.uid}.direction`;
+            
+            try {
+                await updateDoc(lobbyRef, {
+                    [fieldPath]: {x: dx, y: dy}
+                });
+            } catch (err) {
+                console.log("Input rate limit or error", err);
+            }
+        }
+
+
+        // --- RENDERING ---
+
+        function startGameUI() {
+            switchScreen('game');
+            // Resize canvas
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+        }
+
+        function resizeCanvas() {
+            const container = document.getElementById('game-screen');
+            const size = Math.min(container.clientWidth - 20, container.clientHeight - 100);
+            canvas.width = size;
+            canvas.height = size;
+        }
+
+        function renderGame() {
+            // Clear
+            ctx.fillStyle = "#0f172a"; // Dark slate
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const cellSize = canvas.width / TILE_COUNT;
+
+            // Draw Grid (Subtle)
+            ctx.strokeStyle = "#1e293b";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = 0; i <= TILE_COUNT; i++) {
+                ctx.moveTo(i * cellSize, 0);
+                ctx.lineTo(i * cellSize, canvas.height);
+                ctx.moveTo(0, i * cellSize);
+                ctx.lineTo(canvas.width, i * cellSize);
+            }
+            ctx.stroke();
+
+            // Draw Food
+            if (STATE.food) {
+                ctx.fillStyle = "#ef4444"; // Red
+                ctx.shadowColor = "#ef4444";
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.arc(
+                    STATE.food.x * cellSize + cellSize/2, 
+                    STATE.food.y * cellSize + cellSize/2, 
+                    cellSize/2 - 2, 0, Math.PI*2
+                );
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+
+            // Draw Players
+            Object.values(STATE.players).forEach(p => {
+                if (!p.alive && p.body.length === 0) return; // Completely gone
+                
+                ctx.fillStyle = p.alive ? p.color : '#475569'; // Grey if dead body remains
+                
+                p.body.forEach((seg, index) => {
+                    // Head is slightly bigger or different
+                    const isHead = index === 0;
+                    
+                    const x = seg.x * cellSize;
+                    const y = seg.y * cellSize;
+
+                    if (isHead) {
+                        ctx.fillStyle = p.alive ? lightenColor(p.color, 20) : '#64748b';
+                        ctx.fillRect(x, y, cellSize, cellSize);
+                        
+                        // Eyes
+                        ctx.fillStyle = "white";
+                        ctx.fillRect(x + cellSize*0.2, y + cellSize*0.2, cellSize*0.2, cellSize*0.2);
+                        ctx.fillRect(x + cellSize*0.6, y + cellSize*0.2, cellSize*0.2, cellSize*0.2);
+                        
+                        ctx.fillStyle = p.alive ? p.color : '#475569'; // Reset for body
+                    } else {
+                        // Make body slightly smaller for aesthetic spacing
+                        ctx.fillRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
+                    }
+                });
+            });
+        }
+
+        function updateScoreboard() {
+            document.getElementById('round-display').innerText = STATE.round;
+            const container = document.getElementById('scoreboard-container');
+            container.innerHTML = '';
+
+            Object.values(STATE.players).forEach(p => {
+                const div = document.createElement('div');
+                div.className = `flex flex-col items-center p-2 rounded ${!p.alive ? 'opacity-50 grayscale' : ''}`;
+                div.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded-full" style="background-color: ${p.color}"></div>
+                        <span class="font-bold text-white">${p.name}</span>
+                    </div>
+                    <div class="text-xs text-gray-400">Wins: ${p.wins}</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // --- UTILS ---
+
+        function getRandomPosition() {
+            return {
+                x: Math.floor(Math.random() * TILE_COUNT),
+                y: Math.floor(Math.random() * TILE_COUNT)
+            };
+        }
+
+        function switchScreen(screenName) {
+            Object.values(screens).forEach(el => el.classList.add('hidden'));
+            screens[screenName].classList.remove('hidden');
+        }
+
+        function showToast(msg, type = 'info') {
+            // Simple alert fallback for now, could be a nice div
+            alert(msg);
+        }
+
+        function showOverlay(title, subtitle, countdownText, isFinal = false) {
+            const overlay = document.getElementById('overlay-msg');
+            overlay.classList.remove('hidden');
+            document.getElementById('overlay-title').innerText = title;
+            document.getElementById('overlay-subtitle').innerText = subtitle;
+            document.getElementById('overlay-countdown').innerText = countdownText;
+
+            if (isFinal) {
+                document.getElementById('return-lobby-btn').classList.remove('hidden');
+            } else {
+                document.getElementById('return-lobby-btn').classList.add('hidden');
+            }
+        }
+
+        function hideOverlay() {
+            document.getElementById('overlay-msg').classList.add('hidden');
+        }
+
+        function getPlayerColor(uid) {
+            // Deterministic color generation based on UID char codes
+            if (uid === STATE.hostId) return '#4ade80'; // Host Green
+            let hash = 0;
+            for (let i = 0; i < uid.length; i++) {
+                hash = uid.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+            return '#' + "00000".substring(0, 6 - c.length) + c;
+        }
+
+        // Helper to lighten color for head
+        function lightenColor(color, percent) {
+            // Very basic hex manipulator, assumes standard format
+            return color; 
+        }
+
+    </script>
+</body>
+</html>
