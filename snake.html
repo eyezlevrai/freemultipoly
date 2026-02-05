@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TC SNAKE - Battle Royale</title>
+    <!-- Balises pour empêcher l'indexation -->
+    <meta name="robots" content="noindex">
+    <meta name="googlebot" content="noindex">
+    
+    <title>TC SNAKE - Battle Royale (BO5)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #1a202c; color: #e2e8f0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; }
@@ -39,7 +43,7 @@
                 <div class="space-y-4 text-sm text-gray-300">
                     <div>
                         <strong class="text-white block mb-1">🏆 Objectif</strong>
-                        Être le dernier serpent en vie. Le match se joue en <span class="text-yellow-400">Best of 3</span> (premier à 2 victoires).
+                        Être le dernier serpent en vie. Le match se joue en <span class="text-yellow-400">Best of 5</span> (premier à 3 victoires).
                     </div>
                     <div>
                         <strong class="text-white block mb-1">⚔️ Combat PvP</strong>
@@ -60,7 +64,7 @@
         <!-- MAIN LOGIN CARD -->
         <div id="login-card" class="flex flex-col items-center gap-6 p-8 bg-gray-800 rounded-xl shadow-2xl max-w-md w-full border border-gray-700 transition-all">
             <h1 class="text-5xl font-bold text-green-400 tracking-tighter">TC <span class="text-white">SNAKE</span></h1>
-            <p class="text-gray-400 text-center">Le dernier survivant gagne. Best of 3.</p>
+            <p class="text-gray-400 text-center">Le dernier survivant gagne. <span class="text-yellow-400 font-bold">Best of 5</span>.</p>
             
             <div class="w-full flex flex-col gap-3">
                 <input type="text" id="username-input" placeholder="Votre Pseudo" class="w-full p-3 bg-gray-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-green-500 font-bold text-center" maxlength="10">
@@ -97,13 +101,24 @@
 
     <!-- UI: GAME -->
     <div id="game-screen" class="hidden relative w-full h-full flex flex-col items-center justify-center bg-gray-900">
-        <div class="absolute top-4 left-0 right-0 flex justify-center gap-8 pointer-events-none">
-            <div id="game-info" class="bg-gray-800/80 px-6 py-2 rounded-full border border-gray-600 text-white font-mono flex gap-4">
-                <span>Manche: <span id="round-display" class="text-yellow-400">1</span>/3</span>
+        
+        <!-- Top Info Bar -->
+        <div class="absolute top-4 left-0 right-0 flex justify-center pointer-events-none">
+            <div id="game-info" class="bg-gray-800/90 px-6 py-2 rounded-full border border-gray-600 text-white font-mono shadow-lg">
+                <span>Manche <span id="round-display" class="text-yellow-400 font-bold">1</span> <span class="text-gray-500 text-xs">(BO5)</span></span>
             </div>
         </div>
-        <div id="scoreboard-container" class="absolute top-20 left-4 right-4 flex justify-between pointer-events-none text-sm"></div>
+
+        <!-- Leaderboard (Top Right) -->
+        <div class="absolute top-4 right-4 w-48 bg-gray-800/90 border border-gray-700 rounded-lg p-3 pointer-events-none shadow-xl backdrop-blur-sm">
+            <h3 class="text-xs font-bold text-gray-400 uppercase border-b border-gray-700 pb-1 mb-2">Classement</h3>
+            <ul id="leaderboard-list" class="space-y-2 text-sm">
+                <!-- Injected via JS -->
+            </ul>
+        </div>
+
         <canvas id="game-canvas" width="600" height="600" class="max-w-[95vw] max-h-[80vh] object-contain border-2 border-gray-700"></canvas>
+        
         <div class="md:hidden absolute bottom-8 flex gap-4">
             <button onclick="handleMobileInput('ArrowLeft')" class="w-16 h-16 bg-gray-700/50 rounded-full text-2xl">⬅️</button>
             <div class="flex flex-col gap-4">
@@ -112,12 +127,23 @@
             </div>
             <button onclick="handleMobileInput('ArrowRight')" class="w-16 h-16 bg-gray-700/50 rounded-full text-2xl">➡️</button>
         </div>
-        <div id="overlay-msg" class="hidden absolute inset-0 bg-black/70 flex items-center justify-center z-50">
-            <div class="bg-gray-800 p-8 rounded-xl border border-gray-600 text-center">
+        
+        <!-- Overlay -->
+        <div id="overlay-msg" class="hidden absolute inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm">
+            <div class="bg-gray-800 p-8 rounded-xl border border-gray-600 text-center shadow-2xl max-w-sm w-full mx-4">
                 <h2 id="overlay-title" class="text-4xl font-bold text-white mb-2">Manche Terminée</h2>
                 <p id="overlay-subtitle" class="text-gray-300 text-lg mb-6">Le vainqueur est...</p>
-                <div id="overlay-countdown" class="text-2xl font-mono text-yellow-400">Prochaine manche dans 3s...</div>
-                <button id="return-lobby-btn" onclick="location.reload()" class="hidden mt-4 px-6 py-2 bg-red-600 hover:bg-red-500 rounded text-white">Quitter</button>
+                
+                <div id="overlay-countdown" class="text-2xl font-mono text-yellow-400 mb-6">Prochaine manche...</div>
+                
+                <div class="flex flex-col gap-3">
+                    <button id="restart-match-btn" onclick="restartMatch()" class="hidden w-full px-6 py-3 bg-green-600 hover:bg-green-500 rounded text-white font-bold transition shadow-lg">
+                        🔄 Rejouer la partie
+                    </button>
+                    <button id="return-lobby-btn" onclick="location.reload()" class="hidden w-full px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded text-white transition">
+                        🚪 Quitter
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -129,8 +155,6 @@
         import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, arrayUnion, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- CONFIGURATION CORRIGÉE ---
-        
-        // 1. Définition de votre configuration par défaut (Celle de votre serveur)
         const myProductionConfig = {
             apiKey: "AIzaSyC3z9jKfNADm6Qt0z2HXTskyvlEXoghS88",
             authDomain: "freemultipoly.firebaseapp.com",
@@ -142,8 +166,6 @@
 
         let firebaseConfig = myProductionConfig;
 
-        // 2. Tentative de surcharge UNIQUEMENT si on est dans l'éditeur (Canvas)
-        // On utilise un try-catch global pour éviter tout crash si la variable n'existe pas
         try {
             if (typeof window !== 'undefined' && window.__firebase_config) {
                  firebaseConfig = JSON.parse(window.__firebase_config);
@@ -151,11 +173,9 @@
                  firebaseConfig = JSON.parse(__firebase_config);
             }
         } catch (e) {
-            // Si erreur, on garde silencieusement la config de production
             console.log("Utilisation de la config de production par défaut.");
         }
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -173,13 +193,14 @@
             tileCount: 30,
             gameStatus: 'waiting',
             myDirection: {x: 0, y: 0},
+            lastSentDirection: {x: 0, y: 0},
             lastProcessedInput: null
         };
 
         const GRID_SIZE = 20;
         const TILE_COUNT = 30;
+        const WINS_REQUIRED = 3; // BO5 = First to 3
 
-        // Utility: Get App ID Safely
         const getAppId = () => {
             try {
                 return (typeof __app_id !== 'undefined') ? __app_id : 'default-app-id';
@@ -191,7 +212,6 @@
         // --- AUTHENTICATION ---
         async function initAuth() {
             try {
-                // Vérification sécurisée du token
                 let hasToken = false;
                 try {
                     hasToken = (typeof __initial_auth_token !== 'undefined' && __initial_auth_token);
@@ -239,8 +259,7 @@
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d');
 
-        // --- EXPORT GLOBAL FUNCTIONS (IMPORTANT FOR HTML ONCLICK) ---
-        // C'est ici qu'on attache les fonctions au scope global window pour que les boutons fonctionnent
+        // --- EXPORT GLOBAL FUNCTIONS ---
 
         let isRulesOpen = false;
         window.toggleRules = () => {
@@ -328,8 +347,9 @@
             const appId = getAppId();
             const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', STATE.lobbyId);
             
-            if (Object.keys(STATE.players).length < 2) {
-                showToast("Il faut au moins 2 joueurs !", "error");
+            // Allow single player for testing
+            if (Object.keys(STATE.players).length < 1) {
+                showToast("Erreur : aucun joueur !", "error");
                 return;
             }
 
@@ -337,6 +357,28 @@
                 status: 'playing',
                 round: 1,
                 players: resetPositions(STATE.players)
+            });
+        };
+
+        window.restartMatch = async () => {
+            if (!STATE.isHost) return;
+            const appId = getAppId();
+            const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', STATE.lobbyId);
+
+            // Reset wins but keep players
+            const resetPlayers = {...STATE.players};
+            Object.keys(resetPlayers).forEach(uid => {
+                resetPlayers[uid].wins = 0;
+            });
+            const startPlayers = resetPositions(resetPlayers);
+
+            await updateDoc(lobbyRef, {
+                status: 'playing',
+                round: 1,
+                matchWinnerName: null,
+                roundWinnerName: null,
+                players: startPlayers,
+                food: getRandomPosition()
             });
         };
 
@@ -348,7 +390,6 @@
         // --- INTERNAL LOGIC ---
 
         function createPlayerObject(uid, name, isHost) {
-            const color = isHost ? '#4ade80' : '#60a5fa'; 
             const startX = Math.floor(Math.random() * (TILE_COUNT - 4)) + 2;
             const startY = Math.floor(Math.random() * (TILE_COUNT - 4)) + 2;
 
@@ -418,19 +459,21 @@
 
             if (data.status === 'playing' || data.status === 'round_over') {
                 renderGame();
-                updateScoreboard();
+                updateLeaderboard();
             }
 
-            if (STATE.isHost && data.status === 'playing' && !STATE.gameLoopId) {
-                startGameLoop();
+            // If game restarted (went back to playing from match_over)
+            if (data.status === 'playing') {
+                hideOverlay();
+                if (STATE.isHost && !STATE.gameLoopId) {
+                    startGameLoop();
+                }
             }
 
             if (data.status === 'round_over') {
                 showOverlay("Manche terminée", `Gagnant: ${data.roundWinnerName || 'Personne'}`, "Prochaine manche...");
             } else if (data.status === 'match_over') {
                 showOverlay("VICTOIRE !", `Le grand champion est ${data.matchWinnerName}`, "Partie terminée", true);
-            } else {
-                hideOverlay();
             }
         }
 
@@ -450,7 +493,8 @@
 
         function startGameLoop() {
             if (STATE.gameLoopId) clearInterval(STATE.gameLoopId);
-            STATE.gameLoopId = setInterval(hostGameTick, 150);
+            // Increased Tick Rate to 100ms for responsiveness
+            STATE.gameLoopId = setInterval(hostGameTick, 100);
         }
 
         async function hostGameTick() {
@@ -522,8 +566,9 @@
                     roundWinnerName = "Personne (Match Nul)";
                 }
             } else if (activePlayerCount === 1 && playersAlive === 0) {
+                 // Single player ended (death)
                  roundOver = true;
-                 roundWinnerName = "Le mur (Perdu)";
+                 roundWinnerName = "Le mur (Tu as perdu)";
             }
 
             const appId = getAppId();
@@ -534,8 +579,9 @@
                 STATE.gameLoopId = null;
 
                 let matchWinner = null;
+                // Check BO5 Win
                 Object.values(players).forEach(p => {
-                    if (p.wins >= 2) matchWinner = p.name;
+                    if (p.wins >= WINS_REQUIRED) matchWinner = p.name;
                 });
 
                 if (matchWinner) {
@@ -563,22 +609,26 @@
                     }, 3000);
                 }
             } else {
-                await updateDoc(lobbyRef, {
+                // Fire and forget, catch error
+                updateDoc(lobbyRef, {
                     players: players,
                     food: food
-                });
+                }).catch(e => console.log("Tick sync error", e));
             }
         }
 
         document.addEventListener('keydown', (e) => {
             if (STATE.gameStatus !== 'playing') return;
+            // Prevent default behavior for arrow keys
             if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {
                 e.preventDefault();
             }
+            // Anti-spam: Ignore repeated key events (holding down key)
+            if (e.repeat) return;
             handleInput(e.key);
         });
 
-        async function handleInput(key) {
+        function handleInput(key) {
             let dx = 0, dy = 0;
             if (key === 'ArrowUp') dy = -1;
             else if (key === 'ArrowDown') dy = 1;
@@ -586,17 +636,20 @@
             else if (key === 'ArrowRight') dx = 1;
             else return;
 
+            // Optim: Check if direction actually changed
+            if (STATE.lastSentDirection.x === dx && STATE.lastSentDirection.y === dy) return;
+            STATE.lastSentDirection = {x: dx, y: dy};
+
             const appId = getAppId();
             const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', STATE.lobbyId);
             const fieldPath = `players.${STATE.user.uid}.direction`;
             
-            try {
-                await updateDoc(lobbyRef, {
-                    [fieldPath]: {x: dx, y: dy}
-                });
-            } catch (err) {
-                console.log("Input rate limit or error", err);
-            }
+            // Fire and forget (no await) for responsiveness
+            updateDoc(lobbyRef, {
+                [fieldPath]: {x: dx, y: dy}
+            }).catch(err => {
+                console.log("Input error", err);
+            });
         }
 
         function startGameUI() {
@@ -669,23 +722,23 @@
             });
         }
 
-        function updateScoreboard() {
+        function updateLeaderboard() {
             document.getElementById('round-display').innerText = STATE.round;
-            const container = document.getElementById('scoreboard-container');
-            container.innerHTML = '';
+            const container = document.getElementById('leaderboard-list');
+            
+            // Sort players by wins descending
+            const sortedPlayers = Object.values(STATE.players).sort((a, b) => b.wins - a.wins);
 
-            Object.values(STATE.players).forEach(p => {
-                const div = document.createElement('div');
-                div.className = `flex flex-col items-center p-2 rounded ${!p.alive ? 'opacity-50 grayscale' : ''}`;
-                div.innerHTML = `
+            container.innerHTML = sortedPlayers.map((p, index) => `
+                <li class="flex items-center justify-between ${!p.alive ? 'opacity-50' : ''}">
                     <div class="flex items-center gap-2">
-                        <div class="w-3 h-3 rounded-full" style="background-color: ${p.color}"></div>
-                        <span class="font-bold text-white">${p.name}</span>
+                        <span class="text-xs text-gray-500 font-mono">#${index+1}</span>
+                        <div class="w-2 h-2 rounded-full" style="background-color: ${p.color}"></div>
+                        <span class="font-bold text-white truncate max-w-[80px]">${p.name}</span>
                     </div>
-                    <div class="text-xs text-gray-400">Wins: ${p.wins}</div>
-                `;
-                container.appendChild(div);
-            });
+                    <span class="text-yellow-400 font-bold">${p.wins} <span class="text-[10px] text-gray-500">wins</span></span>
+                </li>
+            `).join('');
         }
 
         function getRandomPosition() {
@@ -711,10 +764,23 @@
             document.getElementById('overlay-subtitle').innerText = subtitle;
             document.getElementById('overlay-countdown').innerText = countdownText;
 
+            const quitBtn = document.getElementById('return-lobby-btn');
+            const restartBtn = document.getElementById('restart-match-btn');
+
             if (isFinal) {
-                document.getElementById('return-lobby-btn').classList.remove('hidden');
+                quitBtn.classList.remove('hidden');
+                // Only host can see restart button
+                if (STATE.isHost) {
+                    restartBtn.classList.remove('hidden');
+                } else {
+                    restartBtn.classList.add('hidden');
+                }
+                // Hide countdown text if game over
+                document.getElementById('overlay-countdown').classList.add('hidden');
             } else {
-                document.getElementById('return-lobby-btn').classList.add('hidden');
+                quitBtn.classList.add('hidden');
+                restartBtn.classList.add('hidden');
+                document.getElementById('overlay-countdown').classList.remove('hidden');
             }
         }
 
